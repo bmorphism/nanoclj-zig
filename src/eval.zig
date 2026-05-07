@@ -82,7 +82,34 @@ pub fn eval(val: Value, env: *Env, gc: *GC) EvalError!Value {
             if (lookupDynamic(sym_id)) |dv| return dv;
         }
         const name = gc.getString(sym_id);
-        return env.get(name) orelse return error.SymbolNotFound;
+        if (env.get(name)) |v| return v;
+        // bb-compat: if name has a `/` and the namespace prefix is in our
+        // whitelist, retry with the suffix.  This makes `(clojure.string/X "...")`
+        // dispatch to the unprefixed `X` builtin without duplicating registrations.
+        if (std.mem.indexOfScalar(u8, name, '/')) |slash| {
+            const ns = name[0..slash];
+            const fnname = name[slash + 1 ..];
+            if (fnname.len > 0) {
+                inline for (.{
+                    "clojure.core",
+                    "clojure.string",
+                    "clojure.set",
+                    "clojure.walk",
+                    "clojure.edn",
+                    "clojure.math",
+                    "clojure.java.io",
+                    "babashka.fs",
+                    "babashka.process",
+                    "babashka.core",
+                }) |allowed| {
+                    if (std.mem.eql(u8, ns, allowed)) {
+                        if (env.get(fnname)) |v| return v;
+                        break;
+                    }
+                }
+            }
+        }
+        return error.SymbolNotFound;
     }
 
     const obj = val.asObj();
@@ -522,25 +549,25 @@ fn evalTry(items: []Value, env: *Env, gc: *GC) EvalError!Value {
         var r = Value.makeNil();
         for (items[1..body_end]) |form| {
             r = eval(form, env, gc) catch |err| {
-                if (err == error.ThrownException) {
-                    if (catch_clause) |cc| {
-                        // (catch ExnType e handler-body...)
-                        // We simplify: (catch e handler-body...)
-                        if (cc.len >= 3) {
-                            const child = env.createChild() catch break :blk Value.makeNil();
-                            gc.trackEnv(child) catch break :blk Value.makeNil();
-                            // cc[1] = exception binding symbol
-                            if (cc[1].isSymbol()) {
-                                const ename = gc.getString(cc[1].asSymbolId());
-                                child.set(ename, thrown_value) catch {};
-                            }
-                            var catch_result = Value.makeNil();
-                            for (cc[2..]) |cf| {
-                                catch_result = eval(cf, child, gc) catch break :blk Value.makeNil();
-                            }
-                            break :blk catch_result;
+                if (catch_clause) |cc| {
+                    // (catch e handler-body...) in the legacy evaluator catches both
+                    // explicit `(throw ...)` and user-facing evaluator errors.
+                    if (cc.len >= 3) {
+                        const child = env.createChild() catch break :blk Value.makeNil();
+                        gc.trackEnv(child) catch break :blk Value.makeNil();
+                        if (cc[1].isSymbol()) {
+                            const ename = gc.getString(cc[1].asSymbolId());
+                            const caught = if (err == error.ThrownException)
+                                thrown_value
+                            else
+                                Value.makeString(gc.internString(@errorName(err)) catch break :blk Value.makeNil());
+                            child.set(ename, caught) catch {};
                         }
-                        break :blk Value.makeNil();
+                        var catch_result = Value.makeNil();
+                        for (cc[2..]) |cf| {
+                            catch_result = eval(cf, child, gc) catch break :blk Value.makeNil();
+                        }
+                        break :blk catch_result;
                     }
                     break :blk Value.makeNil();
                 }
@@ -1378,6 +1405,7 @@ fn evalLoop(items: []Value, env: *Env, gc: *GC) EvalError!Value {
         for (items[2..]) |body| {
             result = eval(body, child, gc) catch |err| {
                 if (err == error.RecurCalled) {
+                    defer clearRecurArgs(gc.allocator);
                     // Rebind from recur_args
                     var j: usize = 0;
                     while (j < n_binds and j < recur_args.items.len) : (j += 1) {
@@ -1394,6 +1422,11 @@ fn evalLoop(items: []Value, env: *Env, gc: *GC) EvalError!Value {
 }
 
 var recur_args: std.ArrayListUnmanaged(Value) = @import("compat.zig").emptyList(Value);
+
+fn clearRecurArgs(allocator: std.mem.Allocator) void {
+    recur_args.deinit(allocator);
+    recur_args = @import("compat.zig").emptyList(Value);
+}
 
 /// (when-let [x expr] body...) — bind and execute if truthy
 fn evalWhenLet(items: []Value, env: *Env, gc: *GC) EvalError!Value {

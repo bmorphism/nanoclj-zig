@@ -1,0 +1,32 @@
+{:source "simonwillison.net"
+ :upstream {:datasette "https://datasette.simonwillison.net/simonwillisonblog"
+            :sqlite-url "https://datasette.simonwillison.net/simonwillisonblog.db"
+            :atom "https://simonwillison.net/atom/everything/"
+            :github "https://github.com/simonw/simonwillisonblog"}
+ :canonical {:sqlite "/Users/bob/.cache/simonw/simonwillisonblog.db"
+             :sqlite-sha256 "4b39be2402674bba8a3dbd406a4f4dc29f244fe23ede2f0785c5675a29a7e207"
+             :sqlite-bytes 103374848
+             :duckdb "/Users/bob/.cache/simonw/simonw.duckdb"
+             :duckdb-MiB 53.8
+             :atom "/Users/bob/.cache/simonw/atom-everything.xml"}
+ :counts {:total 13150 :entries 3294 :blogmarks 8347 :quotations 1379 :notes 131 :tags 5430}
+ :fetched-at "2026-05-04"
+ :duckdb-version "v1.5.1 Variegata"
+ :views {:everything_mat "unified kind/id/slug/created/title/html/summary"
+         :by_year "yr × kind histogram"
+         :top_tags "tag × cnt across entry+blogmark+quotation"
+         :recent "latest 200"}
+ :fts {:index "fts_main_everything_mat" :stemmer "porter"
+       :columns [:title :html :summary] :key :id
+       :note "id is per-kind; joins need composite (kind,id) for de-dup"}
+ :recipes
+ {:open-ui  "duckdb -ui /Users/bob/.cache/simonw/simonw.duckdb  # built-in DuckDB UI on :4213"
+  :harlequin "harlequin --adapter duckdb /Users/bob/.cache/simonw/simonw.duckdb"
+  :datasette "datasette /Users/bob/.cache/simonw/simonwillisonblog.db --setting sql_time_limit_ms 5000"
+  :search    "WITH s AS (SELECT id, fts_main_everything_mat.match_bm25(id,'<query>') AS bm25 FROM everything_mat) SELECT e.kind,e.slug,e.title,s.bm25 FROM s JOIN everything_mat e USING(id) WHERE s.bm25 IS NOT NULL ORDER BY s.bm25 DESC LIMIT 20"
+  :recent    "SELECT * FROM recent"
+  :by-year   "SELECT yr,kind,cnt FROM by_year"
+  :tag-cloud "SELECT tag,cnt FROM top_tags LIMIT 50"}
+ :delta-strategy {:atom-feed-poll "curl -sSL https://simonwillison.net/atom/everything/ | xmllint --xpath '//entry[id]/published/text()|//entry[id]/title/text()' -"
+                  :rebuild-cmd "duckdb /Users/bob/.cache/simonw/simonw.duckdb -f /Users/bob/.cache/simonw/build.sql  # idempotent"}
+ :license "Simon Willison's blog content — see https://simonwillison.net for license terms; this is a local cache for personal research, not redistribution."}

@@ -65,6 +65,18 @@ Embed from Zig: add this repo as a dependency, `@import("nanoclj")`, call `eval(
 
 - [zig-syrup](https://github.com/plurigrid/zig-syrup) — Syrup codec + MCP framing + propagator cells
 
+## Format Triad
+
+nanoclj-zig's interchange path is a GF(3)-balanced format triad:
+
+```
+colon config (+1) -> csexp-like tree (0) -> Syrup wire (-1)
+```
+
+Current anchors: `src/bencode.zig` has the colon length-prefix machinery, `src/syrup_bridge.zig` is the compact MCP/Braid lane, `src/lokke_bridge.zig` is the tagged Clojure-shaped lane, and `src/gorj_bridge.zig` exposes raw `(gorj-encode ...)` / `(gorj-decode ...)` Syrup bytes without the old hex roundtrip.
+
+See [docs/FORMAT-TRIAD.md](docs/FORMAT-TRIAD.md) for the upgrade path.
+
 ## License
 
 MIT

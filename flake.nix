@@ -11,10 +11,8 @@
       let
         pkgs = import nixpkgs { inherit system; };
 
-        # Pinned to match what `mlugg/setup-zig@v2 with version: 0.16.0`
-        # resolves to in CI. When upstream zig publishes a stable 0.16.0
-        # this can be replaced with `pkgs.zig`.
-        zigPkg = pkgs.zig;
+        # Keep this aligned with CI: final Zig 0.16.0 is the release floor.
+        zigPkg = pkgs.zig_0_16;
 
         # Build assumes plurigrid/zig-syrup is already checked out as a
         # sibling directory (matches the CI workflow). Nix-side: callers

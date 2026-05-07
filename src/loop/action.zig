@@ -285,7 +285,7 @@ fn failBody(_: RunInfo) ActionError!ActionResult {
     return error.ActionFailed;
 }
 
-fn incBody(_: *agent_lib.Agent, in: Value) error{Invoke}!Value {
+fn incBody(_: *anyopaque, in: Value) error{Invoke}!Value {
     return Value.makeInt(in.asInt() + 1);
 }
 

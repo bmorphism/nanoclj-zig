@@ -30,6 +30,16 @@
 
 (deftest test-strings
   (is= 5 (string-length "hello"))
+  (is= 4 (string-length "café"))
+  (is= 4 (count "café"))
+  (is= "c" (first "cat"))
+  (is= (list "a" "t") (rest "cat"))
+  (is= "é" (nth "café" 3))
+  (is= ["c" "a" "t"] (vec "cat"))
+  (is= "a" (char-at "λa" 1))
+  (is (seq "x"))
+  (is (nil? (seq "")))
+  (is (counted? "cat"))
   (is= "HELLO" (upper-case "hello"))
   (is= "hello" (lower-case "HELLO"))
   (is (starts-with? "hello" "hel"))
@@ -64,10 +74,14 @@
 
 (deftest test-atom-validator
   (testing "set-validator! installs predicate; get-validator returns it"
-    (let* [a (atom 0)]
+    (let* [a (atom 1)]
       (is (nil? (get-validator a)))
       (set-validator! a pos?)
       (is (= pos? (get-validator a)))))
+  (testing "set-validator! rejects invalid current state"
+    (let* [a (atom 0)]
+      (is (try (set-validator! a pos?) false (catch e true)))
+      (is (nil? (get-validator a)))))
   (testing "swap! passes when validator is truthy"
     (let* [a (atom 1)]
       (set-validator! a pos?)
@@ -76,15 +90,13 @@
   (testing "swap! rejects when validator returns falsy"
     (let* [a (atom 1)]
       (set-validator! a pos?)
-      (let* [rejected (try (swap! a (fn [_] -1)) false (catch e true))]
-        (is rejected)
-        (is= 1 (deref a)))))
+      (is (try (swap! a (fn [_] -1)) false (catch e true)))
+      (is= 1 (deref a))))
   (testing "reset! rejects when validator returns falsy"
     (let* [a (atom 1)]
       (set-validator! a pos?)
-      (let* [rejected (try (reset! a 0) false (catch e true))]
-        (is rejected)
-        (is= 1 (deref a))))))
+      (is (try (reset! a 0) false (catch e true)))
+      (is= 1 (deref a)))))
 
 (deftest test-destructuring
   (let* [[a b c] [1 2 3]]

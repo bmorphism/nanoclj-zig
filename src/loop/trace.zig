@@ -339,7 +339,7 @@ fn loadJsonlImpl(self: *TraceStore, data: []const u8, intern_alloc: std.mem.Allo
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
-fn echoBody(_: *agent_lib.Agent, input: Value) error{Invoke}!Value {
+fn echoBody(_: *anyopaque, input: Value) error{Invoke}!Value {
     return input;
 }
 

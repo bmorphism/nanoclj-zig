@@ -1042,6 +1042,35 @@ const prelude_forms = [_][]const u8{
     \\          {:pair "δ-δ" :rule "commute"    :charge-sum -2 :diagram "─┤δ-├═┤δ-├─  →  ─┤δ-├╳┤δ-├─"}]
     \\       :quote "String diagrams serve as definition-making devices where converting the diagram into its underlying meaning is entirely mechanical and could be automated."})))
     ,
+    // Beeper native client handlers (zero-copy Syrup, OKLAB identity, Bumpus time-travel)
+    \\(def gorj-mcp-beeper-init     (fn* [args] (pr-str (beeper-init (get args "seed")))))
+    ,
+    \\(def gorj-mcp-beeper-send     (fn* [args] (pr-str (beeper-send (get args "chat_id") (get args "text")))))
+    ,
+    \\(def gorj-mcp-beeper-messages (fn* [args] (pr-str (beeper-messages (get args "chat_id")))))
+    ,
+    \\(def gorj-mcp-beeper-chats    (fn* [args] (pr-str (beeper-chats))))
+    ,
+    \\(def gorj-mcp-beeper-chat     (fn* [args] (pr-str (beeper-chat (get args "chat_id")))))
+    ,
+    \\(def gorj-mcp-beeper-search   (fn* [args] (pr-str (beeper-search (get args "query")))))
+    ,
+    \\(def gorj-mcp-beeper-accounts (fn* [args] (pr-str (beeper-accounts))))
+    ,
+    \\(def gorj-mcp-beeper-contacts (fn* [args] (pr-str (beeper-contacts (get args "account_id") (get args "query")))))
+    ,
+    \\(def gorj-mcp-beeper-edit     (fn* [args] (pr-str (beeper-edit (get args "chat_id") (get args "message_id") (get args "text")))))
+    ,
+    \\(def gorj-mcp-beeper-archive  (fn* [args] (pr-str (beeper-archive (get args "chat_id") (get args "unarchive")))))
+    ,
+    \\(def gorj-mcp-beeper-focus    (fn* [args] (pr-str (beeper-focus))))
+    ,
+    \\(def gorj-mcp-beeper-color    (fn* [args] (pr-str (beeper-color (get args "id")))))
+    ,
+    \\(def gorj-mcp-beeper-timeline (fn* [args] (pr-str (beeper-timeline (get args "seed") (get args "chat_id") (get args "n")))))
+    ,
+    \\(def gorj-mcp-beeper-spi-audit (fn* [args] (pr-str (beeper-spi-audit (get args "seed")))))
+    ,
     // MCP dispatch table: tool name → handler function symbol
     \\(def gorj-mcp-dispatch-table
     \\  {"gorj_eval" gorj-mcp-eval
@@ -1088,7 +1117,21 @@ const prelude_forms = [_][]const u8{
     \\   "gorj_diagram_reduce" gorj-mcp-diagram-reduce
     \\   "gorj_diagram_compose" gorj-mcp-diagram-compose
     \\   "gorj_diagram_parse" gorj-mcp-diagram-parse
-    \\   "gorj_diagram_kernel" gorj-mcp-diagram-kernel})
+    \\   "gorj_diagram_kernel" gorj-mcp-diagram-kernel
+    \\   "beeper_init" gorj-mcp-beeper-init
+    \\   "beeper_send" gorj-mcp-beeper-send
+    \\   "beeper_messages" gorj-mcp-beeper-messages
+    \\   "beeper_chats" gorj-mcp-beeper-chats
+    \\   "beeper_chat" gorj-mcp-beeper-chat
+    \\   "beeper_search" gorj-mcp-beeper-search
+    \\   "beeper_accounts" gorj-mcp-beeper-accounts
+    \\   "beeper_contacts" gorj-mcp-beeper-contacts
+    \\   "beeper_edit" gorj-mcp-beeper-edit
+    \\   "beeper_archive" gorj-mcp-beeper-archive
+    \\   "beeper_focus" gorj-mcp-beeper-focus
+    \\   "beeper_color" gorj-mcp-beeper-color
+    \\   "beeper_timeline" gorj-mcp-beeper-timeline
+    \\   "beeper_spi_audit" gorj-mcp-beeper-spi-audit})
     ,
     // The dispatch function itself — self-hosted MCP routing
     \\(def gorj-mcp-dispatch
@@ -1340,6 +1383,49 @@ const tool_defs = [_]ToolDef{
     .{ .name = "gorj_diagram_kernel", .description = "Rosetta Stone: three equivalent views of the {- _ +} kernel — GF(3) values, Lafont interaction combinators, and string diagram nodes. Shows all active pair reduction rules with diagrams. The minimal universal basis.", .input_schema =
     \\{"type":"object","properties":{},"required":[]}
     },
+    // === BEEPER NATIVE CLIENT (zero-copy Syrup, OKLAB identity, Bumpus time-travel) ===
+    .{ .name = "beeper_init", .description = "Initialize beeper session with seed for deterministic OKLAB contact colors and Bumpus timeline.", .input_schema =
+    \\{"type":"object","properties":{"seed":{"type":"integer","default":1069,"description":"SplitMix64 seed"}},"required":[]}
+    },
+    .{ .name = "beeper_send", .description = "Send message to a chat via Beeper Desktop localhost API.", .input_schema =
+    \\{"type":"object","properties":{"chat_id":{"type":"string","description":"Chat identifier"},"text":{"type":"string","description":"Message text"}},"required":["chat_id","text"]}
+    },
+    .{ .name = "beeper_messages", .description = "List messages in a chat with OKLAB-colored sender identities.", .input_schema =
+    \\{"type":"object","properties":{"chat_id":{"type":"string","description":"Chat identifier"}},"required":["chat_id"]}
+    },
+    .{ .name = "beeper_chats", .description = "List all chats with deterministic OKLAB colors.", .input_schema =
+    \\{"type":"object","properties":{},"required":[]}
+    },
+    .{ .name = "beeper_chat", .description = "Get single chat details with OKLAB contact color.", .input_schema =
+    \\{"type":"object","properties":{"chat_id":{"type":"string","description":"Chat identifier"}},"required":["chat_id"]}
+    },
+    .{ .name = "beeper_search", .description = "Global search across all Beeper chats.", .input_schema =
+    \\{"type":"object","properties":{"query":{"type":"string","description":"Search query"}},"required":["query"]}
+    },
+    .{ .name = "beeper_accounts", .description = "List connected Beeper bridge accounts.", .input_schema =
+    \\{"type":"object","properties":{},"required":[]}
+    },
+    .{ .name = "beeper_contacts", .description = "Search contacts on a bridge account.", .input_schema =
+    \\{"type":"object","properties":{"account_id":{"type":"string","description":"Account identifier"},"query":{"type":"string","description":"Search query"}},"required":["account_id","query"]}
+    },
+    .{ .name = "beeper_edit", .description = "Edit an existing message.", .input_schema =
+    \\{"type":"object","properties":{"chat_id":{"type":"string","description":"Chat identifier"},"message_id":{"type":"string","description":"Message identifier"},"text":{"type":"string","description":"New message text"}},"required":["chat_id","message_id","text"]}
+    },
+    .{ .name = "beeper_archive", .description = "Archive or unarchive a chat.", .input_schema =
+    \\{"type":"object","properties":{"chat_id":{"type":"string","description":"Chat identifier"},"unarchive":{"type":"boolean","default":false,"description":"True to unarchive"}},"required":["chat_id"]}
+    },
+    .{ .name = "beeper_focus", .description = "Bring Beeper Desktop window to front.", .input_schema =
+    \\{"type":"object","properties":{},"required":[]}
+    },
+    .{ .name = "beeper_color", .description = "Get deterministic OKLAB color for any string ID via golden-angle SplitMix64.", .input_schema =
+    \\{"type":"object","properties":{"id":{"type":"string","description":"Identifier to color"}},"required":["id"]}
+    },
+    .{ .name = "beeper_timeline", .description = "Generate Bumpus time-travel sheaf timeline with SplitTree fork/gluing.", .input_schema =
+    \\{"type":"object","properties":{"seed":{"type":"integer","default":1069},"chat_id":{"type":"string","description":"Chat identifier"},"n":{"type":"integer","default":8,"description":"Number of timeline nodes"}},"required":[]}
+    },
+    .{ .name = "beeper_spi_audit", .description = "SPI audit of beeper session RNG via Marsaglia-Bumpus.", .input_schema =
+    \\{"type":"object","properties":{"seed":{"type":"integer","default":1069,"description":"Seed to audit"}},"required":[]}
+    },
 };
 
 // ============================================================================
@@ -1376,44 +1462,44 @@ fn writeJsonLine(writer: anytype, val: json.Value, allocator: std.mem.Allocator)
 }
 
 fn makeResponse(allocator: std.mem.Allocator, id: json.Value, result: json.Value) !json.Value {
-    var obj = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try obj.put(allocator, "jsonrpc", .{ .string = "2.0" });
-    try obj.put(allocator, "id", id);
-    try obj.put(allocator, "result", result);
+    var obj = json.ObjectMap.init(allocator);
+    try obj.put("jsonrpc", .{ .string = "2.0" });
+    try obj.put("id", id);
+    try obj.put("result", result);
     return .{ .object = obj };
 }
 
 fn makeError(allocator: std.mem.Allocator, id: json.Value, code: i64, message: []const u8) !json.Value {
-    var err_obj = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try err_obj.put(allocator, "code", .{ .integer = code });
-    try err_obj.put(allocator, "message", .{ .string = message });
-    var obj = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try obj.put(allocator, "jsonrpc", .{ .string = "2.0" });
-    try obj.put(allocator, "id", id);
-    try obj.put(allocator, "error", .{ .object = err_obj });
+    var err_obj = json.ObjectMap.init(allocator);
+    try err_obj.put("code", .{ .integer = code });
+    try err_obj.put("message", .{ .string = message });
+    var obj = json.ObjectMap.init(allocator);
+    try obj.put("jsonrpc", .{ .string = "2.0" });
+    try obj.put("id", id);
+    try obj.put("error", .{ .object = err_obj });
     return .{ .object = obj };
 }
 
 fn toolResult(allocator: std.mem.Allocator, text: []const u8) !json.Value {
-    var content_obj = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try content_obj.put(allocator, "type", .{ .string = "text" });
-    try content_obj.put(allocator, "text", .{ .string = text });
+    var content_obj = json.ObjectMap.init(allocator);
+    try content_obj.put("type", .{ .string = "text" });
+    try content_obj.put("text", .{ .string = text });
     var content_arr = json.Array.init(allocator);
     try content_arr.append(.{ .object = content_obj });
-    var result = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try result.put(allocator, "content", .{ .array = content_arr });
+    var result = json.ObjectMap.init(allocator);
+    try result.put("content", .{ .array = content_arr });
     return .{ .object = result };
 }
 
 fn toolError(allocator: std.mem.Allocator, text: []const u8) !json.Value {
-    var content_obj = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try content_obj.put(allocator, "type", .{ .string = "text" });
-    try content_obj.put(allocator, "text", .{ .string = text });
+    var content_obj = json.ObjectMap.init(allocator);
+    try content_obj.put("type", .{ .string = "text" });
+    try content_obj.put("text", .{ .string = text });
     var content_arr = json.Array.init(allocator);
     try content_arr.append(.{ .object = content_obj });
-    var result = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try result.put(allocator, "content", .{ .array = content_arr });
-    try result.put(allocator, "isError", .{ .bool = true });
+    var result = json.ObjectMap.init(allocator);
+    try result.put("content", .{ .array = content_arr });
+    try result.put("isError", .{ .bool = true });
     return .{ .object = result };
 }
 
@@ -1422,22 +1508,22 @@ fn toolError(allocator: std.mem.Allocator, text: []const u8) !json.Value {
 // ============================================================================
 
 fn handleInitialize(allocator: std.mem.Allocator) !json.Value {
-    var server_info = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try server_info.put(allocator, "name", .{ .string = SERVER_NAME });
-    try server_info.put(allocator, "version", .{ .string = SERVER_VERSION });
+    var server_info = json.ObjectMap.init(allocator);
+    try server_info.put("name", .{ .string = SERVER_NAME });
+    try server_info.put("version", .{ .string = SERVER_VERSION });
 
-    var capabilities = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try capabilities.put(allocator, "tools", .{ .object = try json.ObjectMap.init(allocator, &.{}, &.{}) });
+    var capabilities = json.ObjectMap.init(allocator);
+    try capabilities.put("tools", .{ .object = json.ObjectMap.init(allocator) });
 
     // Advertise experimental tasks support (MCP 2025-11-25)
-    var tasks_cap = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try tasks_cap.put(allocator, "supported", .{ .bool = true });
-    try capabilities.put(allocator, "tasks", .{ .object = tasks_cap });
+    var tasks_cap = json.ObjectMap.init(allocator);
+    try tasks_cap.put("supported", .{ .bool = true });
+    try capabilities.put("tasks", .{ .object = tasks_cap });
 
-    var result = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try result.put(allocator, "protocolVersion", .{ .string = PROTOCOL_VERSION });
-    try result.put(allocator, "capabilities", .{ .object = capabilities });
-    try result.put(allocator, "serverInfo", .{ .object = server_info });
+    var result = json.ObjectMap.init(allocator);
+    try result.put("protocolVersion", .{ .string = PROTOCOL_VERSION });
+    try result.put("capabilities", .{ .object = capabilities });
+    try result.put("serverInfo", .{ .object = server_info });
     return .{ .object = result };
 }
 
@@ -1451,23 +1537,23 @@ fn handleTasksGet(allocator: std.mem.Allocator, params: json.ObjectMap) !json.Va
 
     const task = getTask(task_id) orelse return toolError(allocator, "unknown task ID");
 
-    var task_obj = try json.ObjectMap.init(allocator, &.{}, &.{});
+    var task_obj = json.ObjectMap.init(allocator);
     var id_str_buf: [20]u8 = undefined;
     const id_str = std.fmt.bufPrint(&id_str_buf, "{d}", .{task.id}) catch "0";
-    try task_obj.put(allocator, "taskId", .{ .string = id_str });
-    try task_obj.put(allocator, "state", .{ .string = switch (task.state) {
+    try task_obj.put("taskId", .{ .string = id_str });
+    try task_obj.put("state", .{ .string = switch (task.state) {
         .working => "working",
         .completed => "completed",
         .failed => "failed",
     } });
 
     if (task.result) |r| {
-        var content_obj = try json.ObjectMap.init(allocator, &.{}, &.{});
-        try content_obj.put(allocator, "type", .{ .string = "text" });
-        try content_obj.put(allocator, "text", .{ .string = r });
+        var content_obj = json.ObjectMap.init(allocator);
+        try content_obj.put("type", .{ .string = "text" });
+        try content_obj.put("text", .{ .string = r });
         var content_arr = json.Array.init(allocator);
         try content_arr.append(.{ .object = content_obj });
-        try task_obj.put(allocator, "content", .{ .array = content_arr });
+        try task_obj.put("content", .{ .array = content_arr });
     }
 
     return .{ .object = task_obj };
@@ -1476,17 +1562,17 @@ fn handleTasksGet(allocator: std.mem.Allocator, params: json.ObjectMap) !json.Va
 fn handleToolsList(allocator: std.mem.Allocator) !json.Value {
     var tool_array = json.Array.init(allocator);
     for (tool_defs) |tool| {
-        var tool_obj = try json.ObjectMap.init(allocator, &.{}, &.{});
-        try tool_obj.put(allocator, "name", .{ .string = tool.name });
-        try tool_obj.put(allocator, "description", .{ .string = tool.description });
+        var tool_obj = json.ObjectMap.init(allocator);
+        try tool_obj.put("name", .{ .string = tool.name });
+        try tool_obj.put("description", .{ .string = tool.description });
         const schema = try json.parseFromSlice(json.Value, allocator, tool.input_schema, .{
             .allocate = .alloc_always,
         });
-        try tool_obj.put(allocator, "inputSchema", schema.value);
+        try tool_obj.put("inputSchema", schema.value);
         try tool_array.append(.{ .object = tool_obj });
     }
-    var result = try json.ObjectMap.init(allocator, &.{}, &.{});
-    try result.put(allocator, "tools", .{ .array = tool_array });
+    var result = json.ObjectMap.init(allocator);
+    try result.put("tools", .{ .array = tool_array });
     return .{ .object = result };
 }
 
@@ -1498,8 +1584,8 @@ fn handleCallTool(allocator: std.mem.Allocator, params: json.ObjectMap) !json.Va
     };
     const arguments = if (params.get("arguments")) |a| switch (a) {
         .object => |o| o,
-        else => try json.ObjectMap.init(allocator, &.{}, &.{}),
-    } else try json.ObjectMap.init(allocator, &.{}, &.{});
+        else => json.ObjectMap.init(allocator),
+    } else json.ObjectMap.init(allocator);
 
     // Self-hosted dispatch: call into nanoclj runtime
     const result_text = dispatchTool(allocator, name, arguments) catch {
@@ -1519,14 +1605,14 @@ fn handleMethod(allocator: std.mem.Allocator, method: []const u8, obj: json.Obje
     } else if (std.mem.eql(u8, method, "tools/call")) {
         const params = if (obj.get("params")) |p| switch (p) {
             .object => |o| o,
-            else => try json.ObjectMap.init(allocator, &.{}, &.{}),
-        } else try json.ObjectMap.init(allocator, &.{}, &.{});
+            else => json.ObjectMap.init(allocator),
+        } else json.ObjectMap.init(allocator);
         return handleCallTool(allocator, params);
     } else if (std.mem.eql(u8, method, "tasks/get")) {
         const params = if (obj.get("params")) |p| switch (p) {
             .object => |o| o,
-            else => try json.ObjectMap.init(allocator, &.{}, &.{}),
-        } else try json.ObjectMap.init(allocator, &.{}, &.{});
+            else => json.ObjectMap.init(allocator),
+        } else json.ObjectMap.init(allocator);
         return handleTasksGet(allocator, params);
     } else {
         return makeError(allocator, .null, -32601, "Method not found");

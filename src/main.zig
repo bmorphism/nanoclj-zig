@@ -16,6 +16,11 @@ const Compiler = @import("compiler.zig").Compiler;
 const disasm = @import("disasm.zig");
 const profile = @import("profile.zig");
 const incr = @import("incr.zig");
+const csexp = @import("csexp.zig");
+
+test {
+    _ = csexp;
+}
 
 fn nanoNow() i128 {
     var ts: std.c.timespec = undefined;
@@ -437,11 +442,14 @@ pub fn loadMacroPrelude(env: *Env, gc: *GC) void {
     }
 }
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const compat = @import("compat.zig");
     var gpa = compat.makeDebugAllocator();
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+    var arg_it = std.process.Args.Iterator.init(init.args);
+    _ = arg_it.skip();
+    const script_path: ?[]const u8 = if (arg_it.next()) |arg| arg else null;
 
     var gc = GC.init(allocator);
     defer gc.deinit();
@@ -470,22 +478,26 @@ pub fn main() !void {
     // Detect terminal width (fallback 80)
     const width: u32 = 80;
 
-    compat.fileWriteAll(stdout, "\x1b[1mnanoclj-zig v0.1.0\x1b[0m");
-    if (std.mem.eql(u8, profile.profileName(), "full")) {
+    if (script_path == null) {
+        compat.fileWriteAll(stdout, "\x1b[1mnanoclj-zig v0.1.0\x1b[0m");
+        if (std.mem.eql(u8, profile.profileName(), "full")) {
+            compat.fileWriteAll(stdout, "\n");
+        } else {
+            var pbuf: [64]u8 = undefined;
+            const pmsg = std.fmt.bufPrint(&pbuf, " [profile: {s}]\n", .{profile.profileName()}) catch " [profile: ?]\n";
+            compat.fileWriteAll(stdout, pmsg);
+        }
+        color_strip.renderTritWheel(stdout, width) catch {};
         compat.fileWriteAll(stdout, "\n");
-    } else {
-        var pbuf: [64]u8 = undefined;
-        const pmsg = std.fmt.bufPrint(&pbuf, " [profile: {s}]\n", .{profile.profileName()}) catch " [profile: ?]\n";
-        compat.fileWriteAll(stdout, pmsg);
     }
-    color_strip.renderTritWheel(stdout, width) catch {};
-    compat.fileWriteAll(stdout, "\n");
 
     // Seed from hostname or "world"
     const world_name: []const u8 = if (std.c.getenv("USER")) |c| std.mem.span(c) else "world";
 
-    color_strip.renderNamedStrip(stdout, world_name, width, 2) catch {};
-    compat.fileWriteAll(stdout, "\n");
+    if (script_path == null) {
+        color_strip.renderNamedStrip(stdout, world_name, width, 2) catch {};
+        compat.fileWriteAll(stdout, "\n");
+    }
 
     // Bind world identity into env
     const world_sym = gc.internString("*world*") catch 0;
@@ -523,6 +535,14 @@ pub fn main() !void {
     loadMacroPrelude(&env, &gc);
 
     loadBcPrelude(&gc, allocator, &vm, &env);
+
+    if (script_path) |path| {
+        const load_file = core.lookupBuiltin("load-file") orelse return error.SymbolNotFound;
+        var res = Resources.unmetered();
+        var load_args = [_]Value{Value.makeString(try gc.internString(path))};
+        _ = try load_file(load_args[0..], &gc, &env, &res);
+        return;
+    }
 
     // ── REPL: world=> ─────────────────────────────────────────────
     while (true) {

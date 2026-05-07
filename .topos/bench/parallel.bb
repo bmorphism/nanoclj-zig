@@ -25,7 +25,16 @@
     {:ms ms :raw (or (:out r) "") :err (or (:err r) "") :exit (:exit r)}))
 
 (defn ansi-strip [s] (str/replace s #"\x1b\[[0-9;]*[A-Za-z]" ""))
-(defn ok? [r expected] (str/includes? (ansi-strip (:raw r)) (str expected)))
+
+;; nanoclj's REPL prints `bob=> RESULT` between the splash and EOF.
+;; A naive `str/includes?` was fragile when ANSI sequences split tokens
+;; or when bb wrapped the value with `nil`-on-println. Match the
+;; canonical prompt pattern instead.
+(defn ok? [r expected]
+  (let [stripped (ansi-strip (:raw r))]
+    (or (boolean (some (fn [[_ v]] (= v (str expected)))
+                       (re-seq #"=>\s+(\S+)" stripped)))
+        (str/includes? stripped (str expected)))))
 
 ;;; Forms — wrap in (do …) so single-form runners (clojure -M -e) see one expr.
 (def FORMS

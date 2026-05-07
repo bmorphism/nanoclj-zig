@@ -20,3 +20,5 @@ pub const skillWatchAllFn = unsupported;
 pub const skillTranscludeFn = unsupported;
 pub const skillCacheStatsFn = unsupported;
 pub const skillInvalidateFn = unsupported;
+
+pub fn deinitGlobalState() void {}

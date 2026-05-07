@@ -120,7 +120,7 @@ const value = @import("../value.zig");
 const Value = value.Value;
 const agent_lib = @import("agent.zig");
 
-fn echoBody(_: *agent_lib.Agent, in: Value) error{Invoke}!Value {
+fn echoBody(_: *anyopaque, in: Value) error{Invoke}!Value {
     return in;
 }
 

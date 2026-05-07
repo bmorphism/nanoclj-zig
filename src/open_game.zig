@@ -133,7 +133,7 @@ fn nowSeed() i64 {
     if (builtin.cpu.arch == .wasm32 or builtin.cpu.arch == .wasm64) {
         return 42;
     } else {
-        // FWD 2026-04-18: std.time.nanoTimestamp removed in 0.16-dev;
+        // FWD 2026-04-18: std.time.nanoTimestamp removed in Zig 0.16.0;
         //                  use clock_gettime(MONOTONIC) as in core.zig nowSeed().
         var ts: std.c.timespec = undefined;
         _ = std.c.clock_gettime(std.c.CLOCK.MONOTONIC, &ts);

@@ -50,6 +50,7 @@ const congrunet = @import("congrunet.zig");
 const holy = @import("holy.zig");
 const zipf = @import("zipf.zig");
 const channel = @import("channel.zig");
+const sealer = @import("sealer.zig");
 const srcloc = @import("srcloc.zig");
 const time_units = @import("time_units.zig");
 const nrepl = @import("nrepl.zig");
@@ -57,6 +58,7 @@ const plural = @import("plural.zig");
 const juvix_bridge = @import("juvix_bridge.zig");
 const refs_agents = @import("refs_agents.zig");
 const loop = @import("loop.zig");
+const beeper = @import("beeper.zig");
 
 fn getSeedMs() i64 {
     if (is_wasm) {
@@ -287,273 +289,286 @@ pub fn initCore(env: *Env, gc: *GC) !void {
         .{ "diagram-swap", &monoidal_diagram.diagramSwapFn },                         .{ "diagram-seq", &monoidal_diagram.diagramSeqFn },
         .{ "diagram-tensor", &monoidal_diagram.diagramTensorFn },                     .{ "diagram-normalize", &monoidal_diagram.diagramNormalizeFn },
         .{ "diagram-well-typed?", &monoidal_diagram.diagramWellTypedFn },             .{ "diagram-summary", &monoidal_diagram.diagramSummaryFn },
+        .{ "diagram-render-ascii", &monoidal_diagram.diagramRenderAsciiFn },
         // Open-game runtime on top of the monoidal diagram kernel
-        .{ "open-game-profile", &open_game.openGameProfileFn },                       .{ "open-game-parity", &open_game.openGameParityFn },
-        .{ "open-game-decision", &open_game.openGameDecisionFn },                     .{ "open-game-decision-no-obs", &open_game.openGameDecisionNoObsFn },
-        .{ "open-game-dependent-decision", &open_game.openGameDependentDecisionFn },  .{ "open-game-forward-function", &open_game.openGameForwardFunctionFn },
-        .{ "open-game-backward-function", &open_game.openGameBackwardFunctionFn },    .{ "open-game-from-functions", &open_game.openGameFromFunctionsFn },
-        .{ "open-game-nature", &open_game.openGameNatureFn },                         .{ "open-game-lift-stochastic", &open_game.openGameLiftStochasticFn },
-        .{ "open-game-discount", &open_game.openGameDiscountFn },                     .{ "open-game-add-payoffs", &open_game.openGameAddPayoffsFn },
-        .{ "open-game-seq", &open_game.openGameSeqFn },                               .{ "open-game-tensor", &open_game.openGameTensorFn },
-        .{ "open-game-sequential", &open_game.openGameSequentialFn },                 .{ "open-game-simultaneous", &open_game.openGameSimultaneousFn },
-        .{ "open-game-diagnostics", &open_game.openGameDiagnosticsFn },               .{ "open-game-is-equilibrium?", &open_game.openGameIsEquilibriumFn },
-        .{ "play", &open_game.playFn },                                               .{ "evaluate", &open_game.evaluateFn },
+                 .{ "open-game-profile", &open_game.openGameProfileFn },
+        .{ "open-game-parity", &open_game.openGameParityFn },                         .{ "open-game-decision", &open_game.openGameDecisionFn },
+        .{ "open-game-decision-no-obs", &open_game.openGameDecisionNoObsFn },         .{ "open-game-dependent-decision", &open_game.openGameDependentDecisionFn },
+        .{ "open-game-forward-function", &open_game.openGameForwardFunctionFn },      .{ "open-game-backward-function", &open_game.openGameBackwardFunctionFn },
+        .{ "open-game-from-functions", &open_game.openGameFromFunctionsFn },          .{ "open-game-nature", &open_game.openGameNatureFn },
+        .{ "open-game-lift-stochastic", &open_game.openGameLiftStochasticFn },        .{ "open-game-discount", &open_game.openGameDiscountFn },
+        .{ "open-game-add-payoffs", &open_game.openGameAddPayoffsFn },                .{ "open-game-seq", &open_game.openGameSeqFn },
+        .{ "open-game-tensor", &open_game.openGameTensorFn },                         .{ "open-game-sequential", &open_game.openGameSequentialFn },
+        .{ "open-game-simultaneous", &open_game.openGameSimultaneousFn },             .{ "open-game-diagnostics", &open_game.openGameDiagnosticsFn },
+        .{ "open-game-is-equilibrium?", &open_game.openGameIsEquilibriumFn },         .{ "play", &open_game.playFn },
+        .{ "evaluate", &open_game.evaluateFn },
         // 12-layer SPI tower (Gay.jl tower.jl)
-        .{ "tower-run", &tower.towerRunFn },                                          .{ "tower-layer", &tower.towerLayerFn },
-        .{ "tower-trit-sum", &tower.towerTritSumFn },
+                                              .{ "tower-run", &tower.towerRunFn },
+        .{ "tower-layer", &tower.towerLayerFn },                                      .{ "tower-trit-sum", &tower.towerTritSumFn },
         // Marsaglia-Bumpus SPI audit (Gay.jl marsaglia_bumpus_tests.jl)
-                                        .{ "spi-audit", &marsaglia_bumpus.spiAuditFn },
-        .{ "runs-test", &marsaglia_bumpus.runsTestFn },                               .{ "split-tree", &marsaglia_bumpus.splitTreeFn },
+        .{ "spi-audit", &marsaglia_bumpus.spiAuditFn },                               .{ "runs-test", &marsaglia_bumpus.runsTestFn },
+        .{ "split-tree", &marsaglia_bumpus.splitTreeFn },
         // Scoped propagators (Gay.jl scoped_propagators.jl)
-        .{ "ancestry-acset", &scoped_propagators.ancestryAcsetFn },                   .{ "materialize", &scoped_propagators.materializeFn },
-        .{ "propagate-strategy", &scoped_propagators.propagateStrategyFn },
+                                    .{ "ancestry-acset", &scoped_propagators.ancestryAcsetFn },
+        .{ "materialize", &scoped_propagators.materializeFn },                        .{ "propagate-strategy", &scoped_propagators.propagateStrategyFn },
+        // Beeper native client (zero-copy Syrup, OKLAB identity, Bumpus time-travel)
+        .{ "beeper-init", &beeper.beeperInitFn },                                     .{ "beeper-send", &beeper.beeperSendFn },
+        .{ "beeper-messages", &beeper.beeperMessagesFn },                             .{ "beeper-chats", &beeper.beeperChatsFn },
+        .{ "beeper-chat", &beeper.beeperChatFn },                                     .{ "beeper-search", &beeper.beeperSearchFn },
+        .{ "beeper-accounts", &beeper.beeperAccountsFn },                             .{ "beeper-contacts", &beeper.beeperContactsFn },
+        .{ "beeper-edit", &beeper.beeperEditFn },                                     .{ "beeper-archive", &beeper.beeperArchiveFn },
+        .{ "beeper-focus", &beeper.beeperFocusFn },                                   .{ "beeper-color", &beeper.beeperColorFn },
+        .{ "beeper-timeline", &beeper.beeperTimelineFn },                             .{ "beeper-spi-audit", &beeper.beeperSpiAuditFn },
         // Core data ops
-                  .{ "dissoc", &dissocFn },
-        .{ "update", &updateFn },                                                     .{ "merge", &mergeFn },
-        .{ "select-keys", &selectKeysFn },                                            .{ "keys", &keysFn },
-        .{ "vals", &valsFn },                                                         .{ "contains?", &containsFn },
+        .{ "dissoc", &dissocFn },                                                     .{ "update", &updateFn },
+        .{ "merge", &mergeFn },                                                       .{ "select-keys", &selectKeysFn },
+        .{ "keys", &keysFn },                                                         .{ "vals", &valsFn },
+        .{ "contains?", &containsFn },
         // Sequence extras
-        .{ "second", &secondFn },                                                     .{ "last", &lastFn },
-        .{ "some", &someFn },                                                         .{ "every?", &everyFn },
-        .{ "not-any?", &notAnyFn },                                                   .{ "sort", &sortFn },
-        .{ "sort-by", &sortByFn },                                                    .{ "distinct", &distinctFn },
-        .{ "flatten", &flattenFn },                                                   .{ "mapcat", &mapcatFn },
-        .{ "interleave", &interleaveFn },                                             .{ "interpose", &interposeFn },
-        .{ "partition", &partitionFn },                                               .{ "frequencies", &frequenciesFn },
-        .{ "group-by", &groupByFn },
+                                                       .{ "second", &secondFn },
+        .{ "last", &lastFn },                                                         .{ "some", &someFn },
+        .{ "every?", &everyFn },                                                      .{ "not-any?", &notAnyFn },
+        .{ "sort", &sortFn },                                                         .{ "sort-by", &sortByFn },
+        .{ "distinct", &distinctFn },                                                 .{ "flatten", &flattenFn },
+        .{ "mapcat", &mapcatFn },                                                     .{ "interleave", &interleaveFn },
+        .{ "interpose", &interposeFn },                                               .{ "partition", &partitionFn },
+        .{ "frequencies", &frequenciesFn },                                           .{ "group-by", &groupByFn },
         // Type ops
-                                                         .{ "name", &nameFn },
-        .{ "keyword", &keywordFn },                                                   .{ "symbol", &symbolFn },
-        .{ "type", &typeFn },                                                         .{ "identity", &identityFn },
+        .{ "name", &nameFn },                                                         .{ "keyword", &keywordFn },
+        .{ "symbol", &symbolFn },                                                     .{ "type", &typeFn },
+        .{ "identity", &identityFn },
         // Atom / reference types
-        .{ "atom", &atomFn },                                                         .{ "deref", &derefFn },
-        .{ "swap!", &swapFn },                                                        .{ "reset!", &resetFn },
-        .{ "compare-and-set!", &compareAndSetFn },                                    .{ "set-validator!", &setValidatorFn },
-        .{ "get-validator", &getValidatorFn },
+                                                        .{ "atom", &atomFn },
+        .{ "deref", &derefFn },                                                       .{ "swap!", &swapFn },
+        .{ "reset!", &resetFn },                                                      .{ "compare-and-set!", &compareAndSetFn },
+        .{ "set-validator!", &setValidatorFn },                                       .{ "get-validator", &getValidatorFn },
         // Refs + STM (single-threaded semantics: see refs_agents.zig)
-                                               .{ "ref", &refs_agents.refFn },
-        .{ "alter", &refs_agents.alterFn },                                           .{ "commute", &refs_agents.alterFn },
+        .{ "ref", &refs_agents.refFn },                                               .{ "alter", &refs_agents.alterFn },
+        .{ "commute", &refs_agents.alterFn },
         // Agents (clojure.core/agent)
-        .{ "agent", &agentFn },                                                       .{ "send", &sendFn },
-        .{ "send-off", &sendOffFn },                                                  .{ "await", &awaitFn },
-        .{ "agent-error", &agentErrorFn },                                            .{ "restart-agent", &restartAgentFn },
-        .{ "set-error-handler!", &setErrorHandlerFn },                                .{ "error-handler", &errorHandlerFn },
-        .{ "history", &historyFn },
+                                                .{ "agent", &agentFn },
+        .{ "send", &sendFn },                                                         .{ "send-off", &sendOffFn },
+        .{ "await", &awaitFn },                                                       .{ "agent-error", &agentErrorFn },
+        .{ "restart-agent", &restartAgentFn },                                        .{ "set-error-handler!", &setErrorHandlerFn },
+        .{ "error-handler", &errorHandlerFn },                                        .{ "history", &historyFn },
         // Fuel (Barton reflexivity: expressions aware of their own cost).
         // `meter` is a special form in transduction.zig; `fuel` is a builtin.
-                                                          .{ "fuel", &fuelFn },
-        .{ "charge", &chargeFn },                                                     .{ "depth", &depthFn },
-        .{ "max-depth", &maxDepthFn },
+        .{ "fuel", &fuelFn },                                                         .{ "charge", &chargeFn },
+        .{ "depth", &depthFn },                                                       .{ "max-depth", &maxDepthFn },
         // (agent-o-nanoclj loop skills are registered below via the
         //  Skill registry — `loop.skills` is the extension surface.)
         // IO
-                                                       .{ "slurp", &slurpFn },
-        .{ "spit", &spitFn },                                                         .{ "read-line", &readLineFn },
-        .{ "shell", &shellFn },                                                       .{ "sh", &shellFn },
+        .{ "slurp", &slurpFn },                                                       .{ "spit", &spitFn },
+        .{ "read-line", &readLineFn },                                                .{ "shell", &shellFn },
+        .{ "sh", &shellFn },
         // Disk I/O (Zig-unique: positional, fsync-exposed, crash-safe atomic-spit)
-        .{ "file/open", &fileOpenFn },                                                .{ "file/close!", &fileCloseFn },
-        .{ "file/size", &fileSizeFn },                                                .{ "file/pread", &filePreadFn },
-        .{ "file/pwrite!", &filePwriteFn },                                           .{ "file/fsync!", &fileFsyncFn },
-        .{ "file/read-all-bytes", &fileReadAllBytesFn },                              .{ "file/atomic-spit!", &fileAtomicSpitFn },
-        .{ "file/mmap-ro", &fileMmapRoFn },                                           .{ "file/munmap!", &fileMunmapFn },
-        .{ "file/flock!", &fileFlockFn },                                             .{ "file/funlock!", &fileFunlockFn },
-        .{ "mmap/count", &mmapCountFn },                                              .{ "mmap/str", &mmapStrFn },
-        .{ "bytes/count", &bytesCountFn },                                            .{ "bytes/str", &bytesStrFn },
-        .{ "str/bytes", &strBytesFn },
+                                                                 .{ "file/open", &fileOpenFn },
+        .{ "file/close!", &fileCloseFn },                                             .{ "file/size", &fileSizeFn },
+        .{ "file/pread", &filePreadFn },                                              .{ "file/pwrite!", &filePwriteFn },
+        .{ "file/fsync!", &fileFsyncFn },                                             .{ "file/read-all-bytes", &fileReadAllBytesFn },
+        .{ "file/atomic-spit!", &fileAtomicSpitFn },                                  .{ "file/mmap-ro", &fileMmapRoFn },
+        .{ "file/munmap!", &fileMunmapFn },                                           .{ "file/flock!", &fileFlockFn },
+        .{ "file/funlock!", &fileFunlockFn },                                         .{ "mmap/count", &mmapCountFn },
+        .{ "mmap/str", &mmapStrFn },                                                  .{ "bytes/count", &bytesCountFn },
+        .{ "bytes/str", &bytesStrFn },                                                .{ "str/bytes", &strBytesFn },
         // Math extras
-                                                       .{ "abs", &absFn },
-        .{ "min", &minFn },                                                           .{ "max", &maxFn },
-        .{ "rand", &randFn },                                                         .{ "rand-int", &randIntFn },
+        .{ "abs", &absFn },                                                           .{ "min", &minFn },
+        .{ "max", &maxFn },                                                           .{ "rand", &randFn },
+        .{ "rand-int", &randIntFn },
         // Bitwise
-        .{ "bit-and", &bitAndFn },                                                    .{ "bit-or", &bitOrFn },
-        .{ "bit-xor", &bitXorFn },                                                    .{ "bit-shift-left", &bitShiftLeftFn },
-        .{ "bit-shift-right", &bitShiftRightFn },
+                                                         .{ "bit-and", &bitAndFn },
+        .{ "bit-or", &bitOrFn },                                                      .{ "bit-xor", &bitXorFn },
+        .{ "bit-shift-left", &bitShiftLeftFn },                                       .{ "bit-shift-right", &bitShiftRightFn },
         // String extras (SIMD-backed)
-                                            .{ "re-find", &reFindFn },
-        .{ "count-str", &countStrFn },
+        .{ "re-find", &reFindFn },                                                    .{ "count-str", &countStrFn },
         // Transcendental idealism (Kantian categories)
-                                                       .{ "judge", &transcendental.judgeFn },
-        .{ "categories", &transcendental.categoriesFn },                              .{ "antinomy", &transcendental.antinomyFn },
-        .{ "phenomenon", &transcendental.phenomenonFn },                              .{ "noumenon", &transcendental.noumenonFn },
+        .{ "judge", &transcendental.judgeFn },                                        .{ "categories", &transcendental.categoriesFn },
+        .{ "antinomy", &transcendental.antinomyFn },                                  .{ "phenomenon", &transcendental.phenomenonFn },
+        .{ "noumenon", &transcendental.noumenonFn },
         // HOF combinators (using partial_fn ObjKind)
-        .{ "partial", &partialFn },                                                   .{ "comp", &compFn },
-        .{ "juxt", &juxtFn },                                                         .{ "complement", &complementFn },
-        .{ "constantly", &constantlyFn },
+                                         .{ "partial", &partialFn },
+        .{ "comp", &compFn },                                                         .{ "juxt", &juxtFn },
+        .{ "complement", &complementFn },                                             .{ "constantly", &constantlyFn },
         // Lazy sequences
-                                                    .{ "lazy-seq", &lazySeqFn },
-        .{ "iterate", &iterateFn },                                                   .{ "repeat", &repeatFn },
-        .{ "repeatedly", &repeatedlyFn },                                             .{ "take-while", &takeWhileFn },
-        .{ "drop-while", &dropWhileFn },                                              .{ "zipmap", &zipmapFn },
+        .{ "lazy-seq", &lazySeqFn },                                                  .{ "iterate", &iterateFn },
+        .{ "repeat", &repeatFn },                                                     .{ "repeatedly", &repeatedlyFn },
+        .{ "take-while", &takeWhileFn },                                              .{ "drop-while", &dropWhileFn },
+        .{ "zipmap", &zipmapFn },
         // Additional predicates
-        .{ "realized?", &realizedFn },                                                .{ "integer?", &isIntegerP },
-        .{ "float?", &isFloatP },                                                     .{ "pos?", &isPosP },
-        .{ "neg?", &isNegP },                                                         .{ "even?", &isEvenP },
-        .{ "odd?", &isOddP },
+                                                            .{ "realized?", &realizedFn },
+        .{ "integer?", &isIntegerP },                                                 .{ "float?", &isFloatP },
+        .{ "pos?", &isPosP },                                                         .{ "neg?", &isNegP },
+        .{ "even?", &isEvenP },                                                       .{ "odd?", &isOddP },
         // Test framework
-                                                                .{ "is", &isFn },
-        .{ "is=", &isEqualFn },                                                       .{ "run-tests", &runTestsFn },
+        .{ "is", &isFn },                                                             .{ "is=", &isEqualFn },
+        .{ "run-tests", &runTestsFn },
         // Namespace ops
-        .{ "*ns*", &currentNsFn },                                                    .{ "ns-name", &nsNameFn },
-        .{ "all-ns", &allNsFn },                                                      .{ "require", &requireFn },
+                                                       .{ "*ns*", &currentNsFn },
+        .{ "ns-name", &nsNameFn },                                                    .{ "all-ns", &allNsFn },
+        .{ "require", &requireFn },
         // Colorspace ops
-        .{ "*cs*", &currentCsFn },                                                    .{ "cs-color", &csColorFn },
-        .{ "cs-complement", &csComplementFn },                                        .{ "cs-distance", &csDistanceFn },
-        .{ "cs-hue", &csHueFn },                                                      .{ "cs-chroma", &csChromaFn },
-        .{ "cs-resolve", &csResolveFn },                                              .{ "cs-radius", &csRadiusFn },
+                                                          .{ "*cs*", &currentCsFn },
+        .{ "cs-color", &csColorFn },                                                  .{ "cs-complement", &csComplementFn },
+        .{ "cs-distance", &csDistanceFn },                                            .{ "cs-hue", &csHueFn },
+        .{ "cs-chroma", &csChromaFn },                                                .{ "cs-resolve", &csResolveFn },
+        .{ "cs-radius", &csRadiusFn },
         // First-class color ops
-        .{ "color", &colorCtorFn },                                                   .{ "color?", &colorPredFn },
-        .{ "color-blend", &colorBlendFn },                                            .{ "color-complement", &colorComplementFn },
-        .{ "color-analogous", &colorAnalogousFn },                                    .{ "color-triadic", &colorTriadicFn },
-        .{ "color-distance", &colorDistanceFn },                                      .{ "color-hue", &colorHueFn },
-        .{ "color-chroma", &colorChromaFn },                                          .{ "color-L", &colorLFn },
-        .{ "color-a", &colorAFn },                                                    .{ "color-b", &colorBFn },
-        .{ "color-alpha", &colorAlphaFn },
+                                                       .{ "color", &colorCtorFn },
+        .{ "color?", &colorPredFn },                                                  .{ "color-blend", &colorBlendFn },
+        .{ "color-complement", &colorComplementFn },                                  .{ "color-analogous", &colorAnalogousFn },
+        .{ "color-triadic", &colorTriadicFn },                                        .{ "color-distance", &colorDistanceFn },
+        .{ "color-hue", &colorHueFn },                                                .{ "color-chroma", &colorChromaFn },
+        .{ "color-L", &colorLFn },                                                    .{ "color-a", &colorAFn },
+        .{ "color-b", &colorBFn },                                                    .{ "color-alpha", &colorAlphaFn },
         // Regex
-                                                   .{ "re-pattern", &rePatternFn },
-        .{ "re-matches", &reMatchesFn },                                              .{ "re-seq", &reSeqFn },
-        .{ "re-matcher", &reMatcherFn },                                              .{ "re-matcher-find", &reMatcherFindFn },
-        .{ "re-groups", &reGroupsFn },
+        .{ "re-pattern", &rePatternFn },                                              .{ "re-matches", &reMatchesFn },
+        .{ "re-seq", &reSeqFn },                                                      .{ "re-matcher", &reMatcherFn },
+        .{ "re-matcher-find", &reMatcherFindFn },                                     .{ "re-groups", &reGroupsFn },
         // Nested map ops
-                                                       .{ "get-in", &getInFn },
-        .{ "assoc-in", &assocInFn },                                                  .{ "update-in", &updateInFn },
-        .{ "reduce-kv", &reduceKvFn },
+        .{ "get-in", &getInFn },                                                      .{ "assoc-in", &assocInFn },
+        .{ "update-in", &updateInFn },                                                .{ "reduce-kv", &reduceKvFn },
         // Transients
-                                                       .{ "transient", &transientFn },
-        .{ "persistent!", &persistentBangFn },                                        .{ "conj!", &conjBangFn },
-        .{ "assoc!", &assocBangFn },                                                  .{ "dissoc!", &dissocBangFn },
-        .{ "transient?", &isTransientFn },
+        .{ "transient", &transientFn },                                               .{ "persistent!", &persistentBangFn },
+        .{ "conj!", &conjBangFn },                                                    .{ "assoc!", &assocBangFn },
+        .{ "dissoc!", &dissocBangFn },                                                .{ "transient?", &isTransientFn },
         // Core sequence ops
-                                                   .{ "seq", &seqFn },
-        .{ "vec", &vecFn },                                                           .{ "next", &nextFn },
-        .{ "butlast", &butlastFn },                                                   .{ "ffirst", &ffirstFn },
-        .{ "fnext", &fnextFn },                                                       .{ "peek", &peekFn },
-        .{ "pop", &popFn },                                                           .{ "disj", &disjFn },
-        .{ "empty", &emptyFn },                                                       .{ "not-empty", &notEmptyFn },
+        .{ "seq", &seqFn },                                                           .{ "vec", &vecFn },
+        .{ "next", &nextFn },                                                         .{ "butlast", &butlastFn },
+        .{ "ffirst", &ffirstFn },                                                     .{ "fnext", &fnextFn },
+        .{ "peek", &peekFn },                                                         .{ "pop", &popFn },
+        .{ "disj", &disjFn },                                                         .{ "empty", &emptyFn },
+        .{ "not-empty", &notEmptyFn },
         // Math
-        .{ "rem", &remFn },                                                           .{ "quot", &quotFn },
-        .{ "hash", &hashFn },
+                                                       .{ "rem", &remFn },
+        .{ "quot", &quotFn },                                                         .{ "hash", &hashFn },
         // Type coercion
-                                                                .{ "char", &charFn },
-        .{ "int", &intFn },                                                           .{ "long", &longFn },
-        .{ "double", &doubleFn },                                                     .{ "byte", &byteFn },
-        .{ "num", &numFn },
+        .{ "char", &charFn },                                                         .{ "int", &intFn },
+        .{ "long", &longFn },                                                         .{ "double", &doubleFn },
+        .{ "byte", &byteFn },                                                         .{ "num", &numFn },
         // Additional predicates
-                                                                  .{ "true?", &isTrueP },
-        .{ "false?", &isFalseP },                                                     .{ "coll?", &isCollP },
-        .{ "boolean?", &isBoolP },                                                    .{ "char?", &isCharP },
-        .{ "int?", &isIntP },                                                         .{ "identical?", &identicalP },
-        .{ "compare", &compareFn },                                                   .{ "format", &formatFn },
+        .{ "true?", &isTrueP },                                                       .{ "false?", &isFalseP },
+        .{ "coll?", &isCollP },                                                       .{ "boolean?", &isBoolP },
+        .{ "char?", &isCharP },                                                       .{ "int?", &isIntP },
+        .{ "identical?", &identicalP },                                               .{ "compare", &compareFn },
+        .{ "format", &formatFn },
         // Batch 2: predicates + ops for 69% coverage
-        .{ "not=", &notEqFn },                                                        .{ "any?", &anyP },
-        .{ "some?", &someP },                                                         .{ "nan?", &nanP },
-        .{ "double?", &isDoubleP },                                                   .{ "seqable?", &seqableP },
-        .{ "counted?", &countedP },                                                   .{ "associative?", &associativeP },
-        .{ "ident?", &identP },                                                       .{ "ifn?", &ifnP },
-        .{ "qualified-ident?", &qualIdentP },                                         .{ "qualified-keyword?", &qualKeywordP },
-        .{ "qualified-symbol?", &qualSymbolP },                                       .{ "simple-ident?", &simpleIdentP },
-        .{ "simple-keyword?", &simpleKeywordP },                                      .{ "simple-symbol?", &simpleSymbolP },
-        .{ "neg-int?", &negIntP },                                                    .{ "pos-int?", &posIntP },
-        .{ "nat-int?", &natIntP },                                                    .{ "special-symbol?", &specialSymbolP },
-        .{ "var?", &varP },                                                           .{ "ratio?", &ratioP },
-        .{ "rational?", &rationalP },                                                 .{ "decimal?", &decimalP },
-        .{ "uuid?", &uuidP },                                                         .{ "reversible?", &reversibleP },
-        .{ "sorted?", &sortedP },
+                                                            .{ "not=", &notEqFn },
+        .{ "any?", &anyP },                                                           .{ "some?", &someP },
+        .{ "nan?", &nanP },                                                           .{ "double?", &isDoubleP },
+        .{ "seqable?", &seqableP },                                                   .{ "counted?", &countedP },
+        .{ "associative?", &associativeP },                                           .{ "ident?", &identP },
+        .{ "ifn?", &ifnP },                                                           .{ "qualified-ident?", &qualIdentP },
+        .{ "qualified-keyword?", &qualKeywordP },                                     .{ "qualified-symbol?", &qualSymbolP },
+        .{ "simple-ident?", &simpleIdentP },                                          .{ "simple-keyword?", &simpleKeywordP },
+        .{ "simple-symbol?", &simpleSymbolP },                                        .{ "neg-int?", &negIntP },
+        .{ "pos-int?", &posIntP },                                                    .{ "nat-int?", &natIntP },
+        .{ "special-symbol?", &specialSymbolP },                                      .{ "var?", &varP },
+        .{ "ratio?", &ratioP },                                                       .{ "rational?", &rationalP },
+        .{ "decimal?", &decimalP },                                                   .{ "uuid?", &uuidP },
+        .{ "reversible?", &reversibleP },                                             .{ "sorted?", &sortedP },
         // Sequence ops
-                                                            .{ "nfirst", &nfirstFn },
-        .{ "nnext", &nnextFn },                                                       .{ "nthnext", &nthnextFn },
-        .{ "nthrest", &nthrestFn },                                                   .{ "find", &findFn },
-        .{ "key", &keyFn },                                                           .{ "val", &valFn2 },
-        .{ "subvec", &subvecFn },                                                     .{ "take-last", &takeLastFn },
-        .{ "take-nth", &takeNthFn },                                                  .{ "drop-last", &dropLastFn },
-        .{ "cycle", &cycleFn },                                                       .{ "shuffle", &shuffleFn },
-        .{ "rand-nth", &randNthFn },                                                  .{ "min-key", &minKeyFn },
-        .{ "max-key", &maxKeyFn },                                                    .{ "some-fn", &someFnFn },
-        .{ "fnil", &fnilFn },                                                         .{ "hash-set", &hashSetFn },
-        .{ "namespace", &namespaceFn },                                               .{ "parse-long", &parseLongFn },
-        .{ "parse-double", &parseDoubleFn },                                          .{ "parse-boolean", &parseBooleanFn },
+        .{ "nfirst", &nfirstFn },                                                     .{ "nnext", &nnextFn },
+        .{ "nthnext", &nthnextFn },                                                   .{ "nthrest", &nthrestFn },
+        .{ "find", &findFn },                                                         .{ "key", &keyFn },
+        .{ "val", &valFn2 },                                                          .{ "subvec", &subvecFn },
+        .{ "take-last", &takeLastFn },                                                .{ "take-nth", &takeNthFn },
+        .{ "drop-last", &dropLastFn },                                                .{ "cycle", &cycleFn },
+        .{ "shuffle", &shuffleFn },                                                   .{ "rand-nth", &randNthFn },
+        .{ "min-key", &minKeyFn },                                                    .{ "max-key", &maxKeyFn },
+        .{ "some-fn", &someFnFn },                                                    .{ "fnil", &fnilFn },
+        .{ "hash-set", &hashSetFn },                                                  .{ "namespace", &namespaceFn },
+        .{ "parse-long", &parseLongFn },                                              .{ "parse-double", &parseDoubleFn },
+        .{ "parse-boolean", &parseBooleanFn },
         // Bitwise extras
-        .{ "bit-not", &bitNotFn },                                                    .{ "bit-test", &bitTestFn },
-        .{ "bit-set", &bitSetFn },                                                    .{ "bit-clear", &bitClearFn },
-        .{ "bit-flip", &bitFlipFn },                                                  .{ "bit-and-not", &bitAndNotFn },
-        .{ "unsigned-bit-shift-right", &unsignedBitShiftRightFn },
+                                               .{ "bit-not", &bitNotFn },
+        .{ "bit-test", &bitTestFn },                                                  .{ "bit-set", &bitSetFn },
+        .{ "bit-clear", &bitClearFn },                                                .{ "bit-flip", &bitFlipFn },
+        .{ "bit-and-not", &bitAndNotFn },                                             .{ "unsigned-bit-shift-right", &unsignedBitShiftRightFn },
         // Metadata
-                           .{ "meta", &metaFn },
-        .{ "with-meta", &withMetaFn },                                                .{ "vary-meta", &varyMetaFn },
+        .{ "meta", &metaFn },                                                         .{ "with-meta", &withMetaFn },
+        .{ "vary-meta", &varyMetaFn },
         // Sequence ops
-        .{ "mapv", &mapvFn },                                                         .{ "filterv", &filtervFn },
-        .{ "remove", &removeFn },                                                     .{ "keep", &keepFn },
-        .{ "keep-indexed", &keepIndexedFn },                                          .{ "map-indexed", &mapIndexedFn },
+                                                       .{ "mapv", &mapvFn },
+        .{ "filterv", &filtervFn },                                                   .{ "remove", &removeFn },
+        .{ "keep", &keepFn },                                                         .{ "keep-indexed", &keepIndexedFn },
+        .{ "map-indexed", &mapIndexedFn },
         // I/O
-        .{ "print", &printFn },                                                       .{ "pr", &prFn },
-        .{ "prn", &prnFn },                                                           .{ "newline", &newlineFn },
+                                                   .{ "print", &printFn },
+        .{ "pr", &prFn },                                                             .{ "prn", &prnFn },
+        .{ "newline", &newlineFn },
         // Mutable refs
-        .{ "volatile!", &volatileBangFn },                                            .{ "vswap!", &vswapBangFn },
-        .{ "vreset!", &vresetBangFn },
+                                                          .{ "volatile!", &volatileBangFn },
+        .{ "vswap!", &vswapBangFn },                                                  .{ "vreset!", &vresetBangFn },
         // Reduce
-                                                       .{ "reductions", &reductionsFn },
-        .{ "reduced", &reducedFn },                                                   .{ "reduced?", &isReducedP },
-        .{ "unreduced", &unreducedFn },                                               .{ "transduce", &transduceFn },
+        .{ "reductions", &reductionsFn },                                             .{ "reduced", &reducedFn },
+        .{ "reduced?", &isReducedP },                                                 .{ "unreduced", &unreducedFn },
+        .{ "transduce", &transduceFn },
         // Misc
-        .{ "delay", &delayFn },                                                       .{ "force", &forceFn },
-        .{ "add-watch", &addWatchFn },                                                .{ "remove-watch", &removeWatchFn },
-        .{ "memoize", &memoizeFn },                                                   .{ "trampoline", &trampolineFn },
-        .{ "sorted-set", &sorted.sortedSetFn },                                       .{ "sorted-set-by", &sorted.sortedSetByFn },
-        .{ "sorted-map", &sorted.sortedMapFn },                                       .{ "sorted-map-by", &sorted.sortedMapByFn },
+                                                      .{ "delay", &delayFn },
+        .{ "force", &forceFn },                                                       .{ "add-watch", &addWatchFn },
+        .{ "remove-watch", &removeWatchFn },                                          .{ "memoize", &memoizeFn },
+        .{ "trampoline", &trampolineFn },                                             .{ "sorted-set", &sorted.sortedSetFn },
+        .{ "sorted-set-by", &sorted.sortedSetByFn },                                  .{ "sorted-map", &sorted.sortedMapFn },
+        .{ "sorted-map-by", &sorted.sortedMapByFn },
         // Pluralism — oppositional worlding
-        .{ "set-world!", &pluralism.setWorldFn },                                     .{ "current-world", &pluralism.currentWorldFn },
-        .{ "plural-equal?", &pluralism.pluralEqualFn },                               .{ "plural-compare", &pluralism.pluralCompareFn },
-        .{ "trit", &pluralism.tritFn },                                               .{ "plural-hash", &pluralism.pluralHashFn },
+                                         .{ "set-world!", &pluralism.setWorldFn },
+        .{ "current-world", &pluralism.currentWorldFn },                              .{ "plural-equal?", &pluralism.pluralEqualFn },
+        .{ "plural-compare", &pluralism.pluralCompareFn },                            .{ "trit", &pluralism.tritFn },
+        .{ "plural-hash", &pluralism.pluralHashFn },
         // Dense f64 (Neanderthal-compatible)
-        .{ "fv", &fvFn },                                                             .{ "fv-get", &fvGetFn },
-        .{ "fv-set!", &fvSetBangFn },                                                 .{ "fv-dot", &fvDotFn },
-        .{ "fv-norm", &fvNormFn },                                                    .{ "fv-axpy!", &fvAxpyBangFn },
-        .{ "fv-count", &fvCountFn },
+                                         .{ "fv", &fvFn },
+        .{ "fv-get", &fvGetFn },                                                      .{ "fv-set!", &fvSetBangFn },
+        .{ "fv-dot", &fvDotFn },                                                      .{ "fv-norm", &fvNormFn },
+        .{ "fv-axpy!", &fvAxpyBangFn },                                               .{ "fv-count", &fvCountFn },
         // Clojure array API (backed by dense_f64; char/long coerce to f64)
-                                                         .{ "make-array", &makeArrayFn },
-        .{ "aget", &agetFn },                                                         .{ "aset", &asetFn },
-        .{ "aset-long", &asetLongFn },                                                .{ "aset-char", &asetCharFn },
-        .{ "alength", &alengthFn },
+        .{ "make-array", &makeArrayFn },                                              .{ "aget", &agetFn },
+        .{ "aset", &asetFn },                                                         .{ "aset-long", &asetLongFn },
+        .{ "aset-char", &asetCharFn },                                                .{ "alength", &alengthFn },
         // Trace (Anglican-compatible)
-                                                          .{ "make-trace", &makeTraceFn },
-        .{ "trace-observe!", &traceObserveBangFn },                                   .{ "trace-log-weight", &traceLogWeightFn },
-        .{ "trace-sites", &traceSitesFn },
+        .{ "make-trace", &makeTraceFn },                                              .{ "trace-observe!", &traceObserveBangFn },
+        .{ "trace-log-weight", &traceLogWeightFn },                                   .{ "trace-sites", &traceSitesFn },
         // Rational numbers (exact arithmetic)
-                                                   .{ "rational", &rationalFn },
-        .{ "numerator", &numeratorFn },                                               .{ "denominator", &denominatorFn },
-        .{ "rationalize", &rationalizeFn },                                           .{ "rational?", &isRationalObjP },
+        .{ "rational", &rationalFn },                                                 .{ "numerator", &numeratorFn },
+        .{ "denominator", &denominatorFn },                                           .{ "rationalize", &rationalizeFn },
+        .{ "rational?", &isRationalObjP },
         // Skill inet (Agent Skills progressive disclosure via interaction nets)
-        .{ "skill-register", &skill_inet.skillRegisterFn },                           .{ "skill-activate", &skill_inet.skillActivateFn },
-        .{ "skill-list", &skill_inet.skillListFn },                                   .{ "skill-load", &skill_inet.skillLoadFn },
-        .{ "skill-parse-file", &skill_inet.skillParseFileFn },                        .{ "skill-net-stats", &skill_inet.skillNetStatsFn },
-        .{ "skill-watch", &skill_inet.skillWatchFn },                                 .{ "skill-watch-all", &skill_inet.skillWatchAllFn },
-        .{ "skill-transclude", &skill_inet.skillTranscludeFn },                       .{ "skill-cache-stats", &skill_inet.skillCacheStatsFn },
-        .{ "skill-invalidate", &skill_inet.skillInvalidateFn },
+                                                   .{ "skill-register", &skill_inet.skillRegisterFn },
+        .{ "skill-activate", &skill_inet.skillActivateFn },                           .{ "skill-list", &skill_inet.skillListFn },
+        .{ "skill-load", &skill_inet.skillLoadFn },                                   .{ "skill-parse-file", &skill_inet.skillParseFileFn },
+        .{ "skill-net-stats", &skill_inet.skillNetStatsFn },                          .{ "skill-watch", &skill_inet.skillWatchFn },
+        .{ "skill-watch-all", &skill_inet.skillWatchAllFn },                          .{ "skill-transclude", &skill_inet.skillTranscludeFn },
+        .{ "skill-cache-stats", &skill_inet.skillCacheStatsFn },                      .{ "skill-invalidate", &skill_inet.skillInvalidateFn },
         // Structured decompositions + sheaves
-                              .{ "decompose", &decomp.decomposeFn },
-        .{ "decomp-bags", &decomp.decompBagsFn },                                     .{ "decomp-width", &decomp.decompWidthFn },
-        .{ "decomp-glue", &decomp.decompGlueFn },                                     .{ "decomp-map", &decomp.decompMapFn },
-        .{ "decomp-decide", &decomp.decompDecideFn },                                 .{ "decomp-skeleton", &decomp.decompSkeletonFn },
-        .{ "decomp-adhesions", &decomp.decompAdhesionsFn },                           .{ "sheaf", &decomp.sheafFn },
-        .{ "section", &decomp.sectionFn },                                            .{ "restrict", &decomp.restrictFn },
-        .{ "extend-section", &decomp.extendSectionFn },                               .{ "trit-trajectory", &decomp.tritTrajectoryFn },
-        .{ "decomp-gf3", &decomp.decompGf3Fn },
+        .{ "decompose", &decomp.decomposeFn },                                        .{ "decomp-bags", &decomp.decompBagsFn },
+        .{ "decomp-width", &decomp.decompWidthFn },                                   .{ "decomp-glue", &decomp.decompGlueFn },
+        .{ "decomp-map", &decomp.decompMapFn },                                       .{ "decomp-decide", &decomp.decompDecideFn },
+        .{ "decomp-skeleton", &decomp.decompSkeletonFn },                             .{ "decomp-adhesions", &decomp.decompAdhesionsFn },
+        .{ "sheaf", &decomp.sheafFn },                                                .{ "section", &decomp.sectionFn },
+        .{ "restrict", &decomp.restrictFn },                                          .{ "extend-section", &decomp.extendSectionFn },
+        .{ "trit-trajectory", &decomp.tritTrajectoryFn },                             .{ "decomp-gf3", &decomp.decompGf3Fn },
         // Zipf's law — power-law rank-frequency distributions
-                                              .{ "zipf-rank", &zipf.zipfRankFn },
-        .{ "zipf-pmf", &zipf.zipfPmfFn },                                             .{ "zipf-harmonic", &zipf.zipfHarmonicFn },
-        .{ "zipf-top-share", &zipf.zipfTopShareFn },                                  .{ "zipf-sample", &zipf.zipfSampleFn },
-        .{ "zipf-taper", &zipf.zipfTaperFn },                                         .{ "zipf-mandelbrot", &zipf.zipfMandelbrotFn },
+        .{ "zipf-rank", &zipf.zipfRankFn },                                           .{ "zipf-pmf", &zipf.zipfPmfFn },
+        .{ "zipf-harmonic", &zipf.zipfHarmonicFn },                                   .{ "zipf-top-share", &zipf.zipfTopShareFn },
+        .{ "zipf-sample", &zipf.zipfSampleFn },                                       .{ "zipf-taper", &zipf.zipfTaperFn },
+        .{ "zipf-mandelbrot", &zipf.zipfMandelbrotFn },
         // CSP channels (core.async-style)
-        .{ "chan", &channel.chanFn },                                                 .{ "chan?", &channel.chanPredFn },
-        .{ "chan!", &channel.chanPutFn },                                             .{ "<!", &channel.chanTakeFn },
-        .{ "close!", &channel.chanCloseFn },                                          .{ "closed?", &channel.chanClosedPredFn },
-        .{ "chan-count", &channel.chanCountFn },                                      .{ "offer!", &channel.chanOfferFn },
-        .{ "poll!", &channel.chanPollFn },
+                                      .{ "chan", &channel.chanFn },
+        .{ "chan?", &channel.chanPredFn },                                            .{ "chan!", &channel.chanPutFn },
+        .{ "<!", &channel.chanTakeFn },                                               .{ "close!", &channel.chanCloseFn },
+        .{ "closed?", &channel.chanClosedPredFn },                                    .{ "chan-count", &channel.chanCountFn },
+        .{ "offer!", &channel.chanOfferFn },                                          .{ "poll!", &channel.chanPollFn },
+        // Sealer/Unsealer — E-rights capability primitives
+        .{ "brand?", &sealer.brandFn },                                               .{ "seal", &sealer.sealFn },
+        .{ "unseal", &sealer.unsealFn },                                              .{ "sealed?", &sealer.sealedPredFn },
+        .{ "seal-pair", &sealer.sealPairFn },
         // Time units — temporal ontology as conversion lattice
-                                                   .{ "time-units", &time_units.timeUnitsFn },
+                                                .{ "time-units", &time_units.timeUnitsFn },
         .{ "time-unit", &time_units.timeUnitFn },                                     .{ "convert-time", &time_units.convertTimeFn },
         .{ "nice-ratios", &time_units.niceRatiosFn },                                 .{ "trice-per-sec", &time_units.tricePerSecFn },
         .{ "glimpses-per-sec", &time_units.glimpsesPerSecFn },                        .{ "time-tower", &time_units.timeTowerFn },
         .{ "hyperreal-time", &time_units.hyperrealTimeFn },                           .{ "surreal-birthday", &time_units.surrealBirthdayFn },
+        // High-resolution monotonic clocks (added 2026-04-28; see time-resolution-floor.md)
+        .{ "now-ns", &time_units.nowNsFn },                                           .{ "now-tsc", &time_units.nowTscFn },
         // nREPL port allocation by color entropy
         .{ "nrepl-port-for", &time_units.nreplPortForFn },                            .{ "nrepl-color", &time_units.nreplColorFn },
         .{ "nrepl-spread", &time_units.nreplSpreadFn },
@@ -656,6 +671,7 @@ pub fn initCore(env: *Env, gc: *GC) !void {
 }
 
 pub fn deinitCore() void {
+    skill_inet.deinitGlobalState();
     if (initialized) {
         builtin_table.deinit();
         initialized = false;
@@ -919,8 +935,75 @@ fn classifyLazy(obj: *const @import("value.zig").Obj, gc: *GC) LazyInfo {
     return .{ .kind = .generic, .payload = &.{} };
 }
 
-fn seqItems(arg: Value, _: *GC) ![]Value {
+fn utf8CharLenAt(s: []const u8, i: usize) usize {
+    if (i >= s.len) return 0;
+    const raw_len = std.unicode.utf8ByteSequenceLength(s[i]) catch 1;
+    const len: usize = @intCast(raw_len);
+    if (len == 0 or i + len > s.len) return 1;
+    return len;
+}
+
+fn utf8CodepointCount(s: []const u8) usize {
+    var count_chars: usize = 0;
+    var i: usize = 0;
+    while (i < s.len) {
+        const len = utf8CharLenAt(s, i);
+        if (len == 0) break;
+        i += len;
+        count_chars += 1;
+    }
+    return count_chars;
+}
+
+fn stringCharValue(s: []const u8, start: usize, len: usize, gc: *GC) !Value {
+    return Value.makeString(try gc.internString(s[start .. start + len]));
+}
+
+fn stringCharAt(s: []const u8, idx: usize, gc: *GC) !?Value {
+    var char_idx: usize = 0;
+    var i: usize = 0;
+    while (i < s.len) {
+        const len = utf8CharLenAt(s, i);
+        if (len == 0) break;
+        if (char_idx == idx) return try stringCharValue(s, i, len, gc);
+        i += len;
+        char_idx += 1;
+    }
+    return null;
+}
+
+fn stringCharVector(s: []const u8, gc: *GC) !*value.Obj {
+    const obj = try gc.allocObj(.vector);
+    var i: usize = 0;
+    while (i < s.len) {
+        const len = utf8CharLenAt(s, i);
+        if (len == 0) break;
+        try obj.data.vector.items.append(gc.allocator, try stringCharValue(s, i, len, gc));
+        i += len;
+    }
+    return obj;
+}
+
+fn stringCharItems(s: []const u8, gc: *GC) ![]Value {
+    const obj = try stringCharVector(s, gc);
+    return obj.data.vector.items.items;
+}
+
+fn stringSeqList(s: []const u8, gc: *GC) !Value {
+    const obj = try gc.allocObj(.list);
+    var i: usize = 0;
+    while (i < s.len) {
+        const len = utf8CharLenAt(s, i);
+        if (len == 0) break;
+        try obj.data.list.items.append(gc.allocator, try stringCharValue(s, i, len, gc));
+        i += len;
+    }
+    return Value.makeObj(obj);
+}
+
+fn seqItems(arg: Value, gc: *GC) ![]Value {
     if (arg.isNil()) return &[_]Value{};
+    if (arg.isString()) return stringCharItems(gc.getString(arg.asStringId()), gc);
     if (!arg.isObj()) return error.TypeError;
     return switch (arg.asObj().kind) {
         .list => arg.asObj().data.list.items.items,
@@ -971,6 +1054,10 @@ fn applyFnOrBuiltin(func: Value, call_args: []Value, gc: *GC, env: *Env, res: *R
 fn first(args: []Value, gc: *GC, env: *Env, _: *Resources) anyerror!Value {
     if (args.len != 1) return error.ArityError;
     if (args[0].isNil()) return Value.makeNil();
+    if (args[0].isString()) {
+        const s = gc.getString(args[0].asStringId());
+        return (try stringCharAt(s, 0, gc)) orelse Value.makeNil();
+    }
     if (!args[0].isObj()) return error.TypeError;
     const obj = args[0].asObj();
     if (obj.kind == .lazy_seq) {
@@ -1015,6 +1102,11 @@ fn rest(args: []Value, gc: *GC, env: *Env, _: *Resources) anyerror!Value {
     if (args.len != 1) return error.ArityError;
     const new = try gc.allocObj(.list);
     if (args[0].isNil()) return Value.makeObj(new);
+    if (args[0].isString()) {
+        const items = try stringCharItems(gc.getString(args[0].asStringId()), gc);
+        if (items.len > 1) try new.data.list.items.appendSlice(gc.allocator, items[1..]);
+        return Value.makeObj(new);
+    }
     if (!args[0].isObj()) return error.TypeError;
     const obj = args[0].asObj();
     if (obj.kind == .lazy_seq) {
@@ -1087,10 +1179,9 @@ fn cons(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Value {
 fn count(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Value {
     if (args.len != 1) return error.ArityError;
     if (args[0].isNil()) return Value.makeInt(0);
-    // String count: return byte length
     if (args[0].isString()) {
         const s = gc.getString(args[0].asStringId());
-        return Value.makeInt(@intCast(s.len));
+        return Value.makeInt(@intCast(utf8CodepointCount(s)));
     }
     if (!args[0].isObj()) return error.TypeError;
     const obj = args[0].asObj();
@@ -1105,13 +1196,18 @@ fn count(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Value {
     return Value.makeInt(n);
 }
 
-fn nth(args: []Value, _: *GC, _: *Env, _: *Resources) anyerror!Value {
+fn nth(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Value {
     if (args.len != 2) return error.ArityError;
-    if (!args[0].isObj() or !args[1].isInt()) return error.TypeError;
-    const obj = args[0].asObj();
+    if (!args[1].isInt()) return error.TypeError;
     const raw = args[1].asInt();
     if (raw < 0) return error.InvalidArgs;
     const idx: usize = std.math.cast(usize, raw) orelse return error.InvalidArgs;
+    if (args[0].isString()) {
+        const s = gc.getString(args[0].asStringId());
+        return (try stringCharAt(s, idx, gc)) orelse error.InvalidArgs;
+    }
+    if (!args[0].isObj()) return error.TypeError;
+    const obj = args[0].asObj();
     const items = switch (obj.kind) {
         .list => obj.data.list.items.items,
         .vector => obj.data.vector.items.items,
@@ -1503,15 +1599,16 @@ fn charAtFn(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Value {
     if (args.len != 2) return error.ArityError;
     if (!args[0].isString() or !args[1].isInt()) return error.TypeError;
     const s = gc.getString(args[0].asStringId());
-    const idx = args[1].asInt();
-    if (idx < 0 or idx >= @as(i48, @intCast(s.len))) return Value.makeNil();
-    return Value.makeString(try gc.internString(&[_]u8{s[@intCast(idx)]}));
+    const raw = args[1].asInt();
+    if (raw < 0) return Value.makeNil();
+    const idx: usize = std.math.cast(usize, raw) orelse return Value.makeNil();
+    return (try stringCharAt(s, idx, gc)) orelse Value.makeNil();
 }
 
 fn stringLengthFn(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Value {
     if (args.len != 1) return error.ArityError;
     if (!args[0].isString()) return error.TypeError;
-    return Value.makeInt(@intCast(gc.getString(args[0].asStringId()).len));
+    return Value.makeInt(@intCast(utf8CodepointCount(gc.getString(args[0].asStringId()))));
 }
 
 fn notFn(args: []Value, _: *GC, _: *Env, _: *Resources) anyerror!Value {
@@ -4556,11 +4653,78 @@ fn withMetaFn(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Value {
     if (args.len != 2) return error.ArityError;
     if (!args[0].isObj()) return error.TypeError;
     const src = args[0].asObj();
-    // Create a shallow copy with the same data
     const new_obj = try gc.allocObj(src.kind);
-    new_obj.data = src.data;
     new_obj.is_transient = src.is_transient;
-    // Attach metadata
+
+    switch (src.kind) {
+        .list => try new_obj.data.list.items.appendSlice(gc.allocator, src.data.list.items.items),
+        .vector => try new_obj.data.vector.items.appendSlice(gc.allocator, src.data.vector.items.items),
+        .map => {
+            try new_obj.data.map.keys.appendSlice(gc.allocator, src.data.map.keys.items);
+            try new_obj.data.map.vals.appendSlice(gc.allocator, src.data.map.vals.items);
+        },
+        .set => try new_obj.data.set.items.appendSlice(gc.allocator, src.data.set.items.items),
+        .function => {
+            try new_obj.data.function.params.appendSlice(gc.allocator, src.data.function.params.items);
+            try new_obj.data.function.body.appendSlice(gc.allocator, src.data.function.body.items);
+            new_obj.data.function.env = src.data.function.env;
+            new_obj.data.function.is_variadic = src.data.function.is_variadic;
+            new_obj.data.function.name = src.data.function.name;
+        },
+        .macro_fn => {
+            try new_obj.data.macro_fn.params.appendSlice(gc.allocator, src.data.macro_fn.params.items);
+            try new_obj.data.macro_fn.body.appendSlice(gc.allocator, src.data.macro_fn.body.items);
+            new_obj.data.macro_fn.env = src.data.macro_fn.env;
+            new_obj.data.macro_fn.is_variadic = src.data.macro_fn.is_variadic;
+            new_obj.data.macro_fn.name = src.data.macro_fn.name;
+        },
+        .atom => new_obj.data.atom = src.data.atom,
+        .bc_closure => {
+            new_obj.data.bc_closure.def = src.data.bc_closure.def;
+            new_obj.data.bc_closure.upvalues = if (src.data.bc_closure.upvalues.len == 0)
+                &[_]Value{}
+            else
+                try gc.allocator.dupe(Value, src.data.bc_closure.upvalues);
+        },
+        .builtin_ref => new_obj.data.builtin_ref = src.data.builtin_ref,
+        .lazy_seq => new_obj.data.lazy_seq = src.data.lazy_seq,
+        .partial_fn => {
+            new_obj.data.partial_fn.func = src.data.partial_fn.func;
+            try new_obj.data.partial_fn.bound_args.appendSlice(gc.allocator, src.data.partial_fn.bound_args.items);
+        },
+        .multimethod => {
+            new_obj.data.multimethod.name = src.data.multimethod.name;
+            new_obj.data.multimethod.dispatch_fn = src.data.multimethod.dispatch_fn;
+            new_obj.data.multimethod.default_method = src.data.multimethod.default_method;
+            try new_obj.data.multimethod.methods.appendSlice(gc.allocator, src.data.multimethod.methods.items);
+        },
+        .protocol => {
+            new_obj.data.protocol.name = src.data.protocol.name;
+            try new_obj.data.protocol.method_names.appendSlice(gc.allocator, src.data.protocol.method_names.items);
+            for (src.data.protocol.impls.items) |impl| {
+                var copy = impl;
+                copy.methods = compat.emptyList(value.NamedMethod);
+                try copy.methods.appendSlice(gc.allocator, impl.methods.items);
+                try new_obj.data.protocol.impls.append(gc.allocator, copy);
+            }
+        },
+        .dense_f64 => {
+            new_obj.data.dense_f64 = src.data.dense_f64;
+            if (src.data.dense_f64.owned and src.data.dense_f64.data.len > 0) {
+                new_obj.data.dense_f64.data = try gc.allocator.dupe(f64, src.data.dense_f64.data);
+            }
+        },
+        .trace => {
+            new_obj.data.trace.log_weight = src.data.trace.log_weight;
+            try new_obj.data.trace.site_names.appendSlice(gc.allocator, src.data.trace.site_names.items);
+            try new_obj.data.trace.site_values.appendSlice(gc.allocator, src.data.trace.site_values.items);
+            try new_obj.data.trace.site_log_probs.appendSlice(gc.allocator, src.data.trace.site_log_probs.items);
+        },
+        .rational => new_obj.data.rational = src.data.rational,
+        .color => new_obj.data.color = src.data.color,
+        .channel, .agent, .file_handle, .bytes, .mmap_view => return error.TypeError,
+    }
+
     if (args[1].isObj() and args[1].asObj().kind == .map) {
         new_obj.meta = args[1].asObj();
     } else if (args[1].isNil()) {
@@ -4593,9 +4757,13 @@ fn varyMetaFn(args: []Value, gc: *GC, env: *Env, _: *Resources) anyerror!Value {
 // BATCH: 30 trivial builtins for jank coverage push 39% → 55%
 // ============================================================================
 
-fn seqFn(args: []Value, _: *GC, _: *Env, _: *Resources) anyerror!Value {
+fn seqFn(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Value {
     if (args.len != 1) return error.ArityError;
     if (args[0].isNil()) return Value.makeNil();
+    if (args[0].isString()) {
+        const s = gc.getString(args[0].asStringId());
+        return if (s.len == 0) Value.makeNil() else try stringSeqList(s, gc);
+    }
     if (!args[0].isObj()) return error.TypeError;
     const obj = args[0].asObj();
     return switch (obj.kind) {
@@ -4609,6 +4777,7 @@ fn seqFn(args: []Value, _: *GC, _: *Env, _: *Resources) anyerror!Value {
 fn vecFn(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Value {
     if (args.len != 1) return error.ArityError;
     if (args[0].isNil()) return Value.makeObj(try gc.allocObj(.vector));
+    if (args[0].isString()) return Value.makeObj(try stringCharVector(gc.getString(args[0].asStringId()), gc));
     if (!args[0].isObj()) return error.TypeError;
     // Special-case: dense_f64 arrays (from make-array / fv) project to a
     // regular vector. Integral values round-trip as i48, fractional as f64.
@@ -4869,6 +5038,7 @@ fn seqableP(args: []Value, _: *GC, _: *Env, _: *Resources) anyerror!Value {
 }
 fn countedP(args: []Value, _: *GC, _: *Env, _: *Resources) anyerror!Value {
     if (args.len != 1) return error.ArityError;
+    if (args[0].isString()) return Value.makeBool(true);
     if (!args[0].isObj()) return Value.makeBool(false);
     return Value.makeBool(switch (args[0].asObj().kind) {
         .list, .vector, .map, .set => true,

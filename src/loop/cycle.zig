@@ -363,7 +363,8 @@ const dataset_lib = @import("dataset.zig");
 const topology_lib = @import("topology.zig");
 const trace_lib = @import("trace.zig");
 
-fn biasedIncBody(ctx: *agent_lib.Agent, in: Value) error{Invoke}!Value {
+fn biasedIncBody(raw_ctx: *anyopaque, in: Value) error{Invoke}!Value {
+    const ctx: *agent_lib.Agent = @ptrCast(@alignCast(raw_ctx));
     const bias: i48 = if (ctx.state) |s| s.asInt() else 0;
     return Value.makeInt(in.asInt() + 1 + bias);
 }

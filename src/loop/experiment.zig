@@ -185,11 +185,11 @@ pub const Experiment = struct {
 // Tests — this is the success-criterion e2e from .topos/agent-o-nanoclj.md §5
 // ─────────────────────────────────────────────────────────────────────────
 
-fn incBody(_: *agent_lib.Agent, in: Value) error{Invoke}!Value {
+fn incBody(_: *anyopaque, in: Value) error{Invoke}!Value {
     return Value.makeInt(in.asInt() + 1);
 }
 
-fn doubleBody(_: *agent_lib.Agent, in: Value) error{Invoke}!Value {
+fn doubleBody(_: *anyopaque, in: Value) error{Invoke}!Value {
     return Value.makeInt(in.asInt() * 2);
 }
 

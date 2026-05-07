@@ -1,0 +1,57 @@
+{
+  "_doc" : "Cross-runtime corpus for OSC 8 visible-width. Inputs are hex-encoded so the file stays JSON-clean; expected widths are filled by tests/visible_width_oracle.bb (joker's regex as oracle). Diff-empty against src/visible_width.zig is the parity claim. See module header in src/visible_width.zig.",
+  "_oracle" : "tests/visible_width_oracle.bb regenerates the 'expected' field from joker's exact regex from commit 964c013.",
+  "cases" : [ {
+    "name" : "plain ASCII",
+    "input_hex" : "68656c6c6f",
+    "expected" : 5
+  }, {
+    "name" : "empty",
+    "input_hex" : "",
+    "expected" : 0
+  }, {
+    "name" : "single space",
+    "input_hex" : "20",
+    "expected" : 1
+  }, {
+    "name" : "OSC 8 BEL terminated",
+    "input_hex" : "1b5d383b3b66696c653a2f2f2f783707636c69636b1b5d383b3b07",
+    "expected" : 5
+  }, {
+    "name" : "OSC 8 ST terminated",
+    "input_hex" : "1b5d383b3b751b5c6c696e6b1b5d383b3b1b5c",
+    "expected" : 4
+  }, {
+    "name" : "OSC 8 with id parameter",
+    "input_hex" : "1b5d383b69643d6b313b687474703a2f2f6578616d706c652e636f6d07636c69636b1b5d383b3b07",
+    "expected" : 5
+  }, {
+    "name" : "before-link-after",
+    "input_hex" : "6265666f726520201b5d383b3b66696c653a2f2f2f7807636c69636b1b5d383b3b072020616674657220",
+    "expected" : 21
+  }, {
+    "name" : "two adjacent links",
+    "input_hex" : "1b5d383b3b75317061071b5d383b3b071b5d383b3b75327062071b5d383b3b07",
+    "expected" : 0
+  }, {
+    "name" : "utf8 four codepoints",
+    "input_hex" : "636166c3a9",
+    "expected" : 4
+  }, {
+    "name" : "utf8 cyrillic",
+    "input_hex" : "d0bfd180d0b8d0b2d0b5d182",
+    "expected" : 6
+  }, {
+    "name" : "utf8 plus OSC 8",
+    "input_hex" : "63616671fc7869c3a91b5d383b3b751b5c6c696e6b1b5d383b3b1b5c",
+    "expected" : 12
+  }, {
+    "name" : "OSC 8 around utf8 label",
+    "input_hex" : "1b5d383b3b66696c653a2f2f2f7807636166c3a91b5d383b3b07",
+    "expected" : 4
+  }, {
+    "name" : "no terminator (joker: count bytes)",
+    "input_hex" : "1b5d383b3b6e6f2d7465726d696e61746f722d68657265",
+    "expected" : 23
+  } ]
+}

@@ -27,9 +27,14 @@ git.pkg-path = "git"
 
 [vars]
 NANOCLJ_DEFAULT_BUILD = "ReleaseSafe"
+NANOCLJ_ZIG_016_DIR = ".zig-toolchains/zig-aarch64-macos-0.16.0"
 
 [hook]
 on-activate = '''
+  case ":$PATH:" in
+    *":$PWD/scripts:"*) ;;
+    *) export PATH="$PWD/scripts:$PATH" ;;
+  esac
   echo "nanoclj-zig env — zig $(zig version 2>/dev/null || echo 'not yet on PATH')"
   if [ ! -d ../zig-syrup ]; then
     echo ""
@@ -42,6 +47,10 @@ on-activate = '''
 
 [profile]
 common = '''
+  case ":$PATH:" in
+    *":$PWD/scripts:"*) ;;
+    *) export PATH="$PWD/scripts:$PATH" ;;
+  esac
   alias nb='zig build'
   alias nt='zig build test --summary all'
   alias nl='zig build loop-test --summary all'
@@ -56,6 +65,8 @@ command = """
     echo "ERROR: ../zig-syrup is required for the build" >&2
     exit 1
   fi
+  export PATH="$PWD/scripts:$PATH"
+  echo "building with zig $(zig version)"
   zig build -Doptimize=$NANOCLJ_DEFAULT_BUILD
   mkdir -p $out/bin
   install -m 755 zig-out/bin/nanoclj         $out/bin/nanoclj

@@ -37,14 +37,16 @@ fn incTool(in: Value) loop.ToolError!Value {
 // and consults its own .state as a per-agent offset.
 var g_registry_ptr: ?*loop.ToolRegistry = null;
 
-fn toolingInc(ctx: *loop.Agent, in: Value) error{Invoke}!Value {
+fn toolingInc(raw_ctx: *anyopaque, in: Value) error{Invoke}!Value {
+    const ctx: *loop.Agent = @ptrCast(@alignCast(raw_ctx));
     const reg = g_registry_ptr orelse return error.Invoke;
     const offset: i48 = if (ctx.state) |s| s.asInt() else 0;
     const scaled = reg.call("inc", in) catch return error.Invoke;
     return Value.makeInt(scaled.asInt() + offset);
 }
 
-fn toolingScale(ctx: *loop.Agent, in: Value) error{Invoke}!Value {
+fn toolingScale(raw_ctx: *anyopaque, in: Value) error{Invoke}!Value {
+    const ctx: *loop.Agent = @ptrCast(@alignCast(raw_ctx));
     const reg = g_registry_ptr orelse return error.Invoke;
     const offset: i48 = if (ctx.state) |s| s.asInt() else 0;
     const scaled = reg.call("scale", in) catch return error.Invoke;
@@ -94,7 +96,7 @@ test "world survives: dump → reload → query loaded invariants" {
     var topo = loop.Topology.init(std.testing.allocator);
     defer topo.deinit();
     _ = try topo.newAgent("inc", struct {
-        fn body(_: *loop.Agent, in: Value) error{Invoke}!Value {
+        fn body(_: *anyopaque, in: Value) error{Invoke}!Value {
             return Value.makeInt(in.asInt() + 1);
         }
     }.body);

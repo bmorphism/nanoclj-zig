@@ -1,0 +1,45 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+required_version=0.16.0
+toolchain_dir=${NANOCLJ_ZIG_016_DIR:-.zig-toolchains/zig-aarch64-macos-0.16.0}
+
+case "$toolchain_dir" in
+  /*) zig_dir=$toolchain_dir ;;
+  *) zig_dir=$repo_root/$toolchain_dir ;;
+esac
+
+zig_bin=$zig_dir/zig
+
+if [ ! -x "$zig_bin" ]; then
+  zig_bin=
+  old_ifs=$IFS
+  IFS=:
+  for dir in $PATH; do
+    IFS=$old_ifs
+    [ -n "$dir" ] || dir=.
+    [ "$dir" = "$repo_root/scripts" ] && continue
+    candidate=$dir/zig
+    if [ -x "$candidate" ] && [ "$("$candidate" version 2>/dev/null || true)" = "$required_version" ]; then
+      zig_bin=$candidate
+      break
+    fi
+    IFS=:
+  done
+  IFS=$old_ifs
+
+  if [ -z "$zig_bin" ]; then
+    echo "nanoclj-zig requires Zig $required_version; missing pinned toolchain: $zig_dir/zig" >&2
+    echo "Set NANOCLJ_ZIG_016_DIR to a Zig $required_version toolchain directory, install the pinned toolchain under .zig-toolchains/, or activate a Flox/Nix environment that provides Zig $required_version." >&2
+    exit 127
+  fi
+fi
+
+actual_version=$("$zig_bin" version)
+if [ "$actual_version" != "$required_version" ]; then
+  echo "nanoclj-zig requires Zig $required_version, got $actual_version at $zig_bin" >&2
+  exit 127
+fi
+
+exec "$zig_bin" "$@"

@@ -319,11 +319,10 @@ test "tryAny dispatches by evaluator kind" {
 }
 
 test "scoreInvocationSteps scores each completed step" {
-    const agent_lib = @import("agent.zig");
     const topology_lib = @import("topology.zig");
 
     const body_struct = struct {
-        fn inc(_: *agent_lib.Agent, in: Value) error{Invoke}!Value {
+        fn inc(_: *anyopaque, in: Value) error{Invoke}!Value {
             return Value.makeInt(in.asInt() + 1);
         }
     };

@@ -91,7 +91,8 @@ pub fn lawMergeStep(experiment: *Experiment, _: *const Report) anyerror!void {
 // Tests
 // ─────────────────────────────────────────────────────────────────────
 
-fn echoStateBody(ctx: *agent_lib.Agent, _: Value) error{Invoke}!Value {
+fn echoStateBody(raw_ctx: *anyopaque, _: Value) error{Invoke}!Value {
+    const ctx: *agent_lib.Agent = @ptrCast(@alignCast(raw_ctx));
     if (ctx.state) |s| return s;
     return Value.makeInt(0);
 }

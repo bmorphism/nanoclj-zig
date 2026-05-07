@@ -451,6 +451,387 @@ pub fn diagramSummaryFn(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror
     return summaryFromAnalysis(analysis, gc);
 }
 
+// ============================================================================
+// RECURSIVE ASCII RENDERER
+// ============================================================================
+//
+// Two-pass-fused: each `renderBlock` call descends into children, returning a
+// fully-rendered `Block` (grid + port positions). Composition stitches the
+// children's grids onto a parent grid in row-major order, drawing connecting
+// wire segments at port positions.
+//
+// Bounded recursion: a depth counter caps descent to keep render cost linear
+// in the analyzed diagram's depth (already validated by `analyzeDiagram`).
+
+const RenderError = error{
+    InvalidDiagram,
+    TypeError,
+    OutOfMemory,
+    Utf8CannotEncodeSurrogateHalf,
+    CodepointTooLarge,
+};
+
+const RENDER_MAX_DEPTH: u32 = 64;
+
+const Block = struct {
+    width: u32,
+    height: u32,
+    /// height * width codepoints, row-major. ' ' (0x20) means blank.
+    grid: []u21,
+    /// x-coordinate of each input wire at the top edge (length = dom.len).
+    in_ports: []u32,
+    /// x-coordinate of each output wire at the bottom edge (length = cod.len).
+    out_ports: []u32,
+
+    fn cellAt(self: *Block, x: u32, y: u32) *u21 {
+        return &self.grid[y * self.width + x];
+    }
+
+    fn deinit(self: *Block, allocator: std.mem.Allocator) void {
+        allocator.free(self.grid);
+        allocator.free(self.in_ports);
+        allocator.free(self.out_ports);
+    }
+};
+
+fn allocGrid(allocator: std.mem.Allocator, width: u32, height: u32) ![]u21 {
+    const grid = try allocator.alloc(u21, @as(usize, width) * @as(usize, height));
+    @memset(grid, ' ');
+    return grid;
+}
+
+fn nameLenFromValue(name: Value, gc: *GC) u32 {
+    const s = valueName(name, gc) orelse return 1;
+    return @intCast(s.len);
+}
+
+fn writeName(grid: []u21, width: u32, row: u32, col: u32, name: Value, gc: *GC) void {
+    const s = valueName(name, gc) orelse return;
+    for (s, 0..) |c, i| {
+        const x = col + @as(u32, @intCast(i));
+        if (x >= width) break;
+        grid[row * width + x] = c;
+    }
+}
+
+fn renderBox(obj: *Obj, gc: *GC, allocator: std.mem.Allocator) RenderError!Block {
+    const name = mapGetByKeyword(obj, gc, "name") orelse return error.InvalidDiagram;
+    const dom_val = mapGetByKeyword(obj, gc, "dom") orelse return error.InvalidDiagram;
+    const cod_val = mapGetByKeyword(obj, gc, "cod") orelse return error.InvalidDiagram;
+    const dom_items = seqItems(dom_val) orelse return error.TypeError;
+    const cod_items = seqItems(cod_val) orelse return error.TypeError;
+
+    const n_in: u32 = @intCast(dom_items.len);
+    const n_out: u32 = @intCast(cod_items.len);
+    const max_ports = @max(n_in, n_out);
+    const port_width: u32 = if (max_ports == 0) 0 else max_ports * 2 - 1;
+    const inner_w = @max(nameLenFromValue(name, gc), port_width);
+    const w = inner_w + 4;
+    const h: u32 = 3; // [in-stub, trapezoid, out-stub]
+
+    const grid = try allocGrid(allocator, w, h);
+    errdefer allocator.free(grid);
+
+    // White trapezoid row: ◁══ label ══▷
+    grid[1 * w + 0] = '◁';
+    grid[1 * w + (w - 1)] = '▷';
+    var x: u32 = 1;
+    while (x < w - 1) : (x += 1) grid[1 * w + x] = '═';
+    const label_start = 2 + (inner_w - nameLenFromValue(name, gc)) / 2;
+    writeName(grid, w, 1, label_start, name, gc);
+
+    // Port stubs (row 0 above trapezoid, row 2 below trapezoid).
+    const ins = try allocator.alloc(u32, n_in);
+    errdefer allocator.free(ins);
+    const outs = try allocator.alloc(u32, n_out);
+    errdefer allocator.free(outs);
+
+    var i: u32 = 0;
+    while (i < n_in) : (i += 1) {
+        const px = 2 + (if (n_in == 1) inner_w / 2 else (i * (inner_w - 1)) / (n_in - 1));
+        ins[i] = px;
+        grid[0 * w + px] = '│';
+    }
+    i = 0;
+    while (i < n_out) : (i += 1) {
+        const px = 2 + (if (n_out == 1) inner_w / 2 else (i * (inner_w - 1)) / (n_out - 1));
+        outs[i] = px;
+        grid[2 * w + px] = '│';
+    }
+
+    return .{ .width = w, .height = h, .grid = grid, .in_ports = ins, .out_ports = outs };
+}
+
+fn renderId(obj: *Obj, gc: *GC, allocator: std.mem.Allocator) RenderError!Block {
+    const wires_val = mapGetByKeyword(obj, gc, "wires") orelse return error.InvalidDiagram;
+    const wires = seqItems(wires_val) orelse return error.TypeError;
+    const n: u32 = @intCast(wires.len);
+    const w = if (n == 0) 1 else (n * 2 - 1);
+    const grid = try allocGrid(allocator, w, 1);
+    errdefer allocator.free(grid);
+
+    const ins = try allocator.alloc(u32, n);
+    errdefer allocator.free(ins);
+    const outs = try allocator.alloc(u32, n);
+    errdefer allocator.free(outs);
+
+    var i: u32 = 0;
+    while (i < n) : (i += 1) {
+        const px = i * 2;
+        ins[i] = px;
+        outs[i] = px;
+        grid[px] = '│';
+    }
+    return .{ .width = w, .height = 1, .grid = grid, .in_ports = ins, .out_ports = outs };
+}
+
+fn renderStub(obj: *Obj, gc: *GC, allocator: std.mem.Allocator, label: []const u8) RenderError!Block {
+    _ = obj;
+    _ = gc;
+    const w: u32 = @intCast(label.len + 2);
+    const grid = try allocGrid(allocator, w, 3);
+    errdefer allocator.free(grid);
+    grid[0 * w + (w / 2)] = '│';
+    grid[1 * w + 0] = '<';
+    for (label, 0..) |c, i| grid[1 * w + 1 + @as(u32, @intCast(i))] = c;
+    grid[1 * w + (w - 1)] = '>';
+    grid[2 * w + (w / 2)] = '│';
+    const ins = try allocator.alloc(u32, 1);
+    errdefer allocator.free(ins);
+    const outs = try allocator.alloc(u32, 1);
+    errdefer allocator.free(outs);
+    ins[0] = w / 2;
+    outs[0] = w / 2;
+    return .{ .width = w, .height = 3, .grid = grid, .in_ports = ins, .out_ports = outs };
+}
+
+fn renderSeq(obj: *Obj, gc: *GC, allocator: std.mem.Allocator, depth: u32) RenderError!Block {
+    const parts_val = mapGetByKeyword(obj, gc, "parts") orelse return error.InvalidDiagram;
+    const parts = seqItems(parts_val) orelse return error.TypeError;
+    if (parts.len == 0) return error.InvalidDiagram;
+
+    var children: std.ArrayListUnmanaged(Block) = .empty;
+    defer {
+        for (children.items) |*c| c.deinit(allocator);
+        children.deinit(allocator);
+    }
+    var max_w: u32 = 0;
+    var total_h: u32 = 0;
+    for (parts) |p| {
+        const child = try renderBlock(p, gc, allocator, depth + 1);
+        try children.append(allocator, child);
+        max_w = @max(max_w, child.width);
+        total_h += child.height;
+    }
+    // 1-row gap between adjacent children for connecting wires
+    const gap_count: u32 = @intCast(children.items.len - 1);
+    const out_w = max_w;
+    const out_h = total_h + gap_count;
+
+    const grid = try allocGrid(allocator, out_w, out_h);
+    errdefer allocator.free(grid);
+
+    // Stamp each child centered horizontally
+    var y: u32 = 0;
+    var prev_out_ports_abs: ?[]const u32 = null;
+    var prev_y_bottom: u32 = 0;
+    for (children.items) |child| {
+        const x_off: u32 = (out_w - child.width) / 2;
+        var ry: u32 = 0;
+        while (ry < child.height) : (ry += 1) {
+            var rx: u32 = 0;
+            while (rx < child.width) : (rx += 1) {
+                grid[(y + ry) * out_w + (x_off + rx)] = child.grid[ry * child.width + rx];
+            }
+        }
+        // Draw connecting wires from prev's out_ports (last row above gap)
+        if (prev_out_ports_abs) |prev| {
+            const gap_y = prev_y_bottom; // single gap row
+            // crude: draw vertical bars at each prev port and child input port; if they differ, leave them
+            for (prev) |px| grid[gap_y * out_w + px] = '│';
+            for (child.in_ports) |cx| grid[gap_y * out_w + (x_off + cx)] = '│';
+        }
+        // Save output ports in absolute coords for next iter
+        const abs_outs = try allocator.alloc(u32, child.out_ports.len);
+        for (child.out_ports, 0..) |op, i| abs_outs[i] = x_off + op;
+        // Free previous
+        if (prev_out_ports_abs) |prev| allocator.free(prev);
+        prev_out_ports_abs = abs_outs;
+
+        y += child.height;
+        prev_y_bottom = y;
+        // Skip the gap row except for the last child
+        if (y < out_h) y += 1;
+    }
+    if (prev_out_ports_abs) |prev| allocator.free(prev);
+
+    // Top in_ports = first child's in_ports shifted by its x_off
+    const first = &children.items[0];
+    const first_xoff: u32 = (out_w - first.width) / 2;
+    const ins = try allocator.alloc(u32, first.in_ports.len);
+    errdefer allocator.free(ins);
+    for (first.in_ports, 0..) |p, i| ins[i] = first_xoff + p;
+
+    // Bottom out_ports = last child's out_ports shifted
+    const last = &children.items[children.items.len - 1];
+    const last_xoff: u32 = (out_w - last.width) / 2;
+    const outs = try allocator.alloc(u32, last.out_ports.len);
+    errdefer allocator.free(outs);
+    for (last.out_ports, 0..) |p, i| outs[i] = last_xoff + p;
+
+    return .{ .width = out_w, .height = out_h, .grid = grid, .in_ports = ins, .out_ports = outs };
+}
+
+fn renderTensor(obj: *Obj, gc: *GC, allocator: std.mem.Allocator, depth: u32) RenderError!Block {
+    const parts_val = mapGetByKeyword(obj, gc, "parts") orelse return error.InvalidDiagram;
+    const parts = seqItems(parts_val) orelse return error.TypeError;
+    if (parts.len == 0) return error.InvalidDiagram;
+
+    var children: std.ArrayListUnmanaged(Block) = .empty;
+    defer {
+        for (children.items) |*c| c.deinit(allocator);
+        children.deinit(allocator);
+    }
+    var total_w: u32 = 0;
+    var max_h: u32 = 0;
+    for (parts) |p| {
+        const child = try renderBlock(p, gc, allocator, depth + 1);
+        try children.append(allocator, child);
+        total_w += child.width + 1; // 1-col gap between children
+        max_h = @max(max_h, child.height);
+    }
+    if (total_w > 0) total_w -= 1; // strip trailing gap
+
+    const grid = try allocGrid(allocator, total_w, max_h);
+    errdefer allocator.free(grid);
+
+    var n_in: usize = 0;
+    var n_out: usize = 0;
+    for (children.items) |c| {
+        n_in += c.in_ports.len;
+        n_out += c.out_ports.len;
+    }
+    const ins = try allocator.alloc(u32, n_in);
+    errdefer allocator.free(ins);
+    const outs = try allocator.alloc(u32, n_out);
+    errdefer allocator.free(outs);
+
+    var x_off: u32 = 0;
+    var in_idx: usize = 0;
+    var out_idx: usize = 0;
+    for (children.items) |child| {
+        const y_off: u32 = (max_h - child.height) / 2;
+        var ry: u32 = 0;
+        while (ry < child.height) : (ry += 1) {
+            var rx: u32 = 0;
+            while (rx < child.width) : (rx += 1) {
+                grid[(y_off + ry) * total_w + (x_off + rx)] = child.grid[ry * child.width + rx];
+            }
+        }
+        for (child.in_ports) |p| {
+            ins[in_idx] = x_off + p;
+            in_idx += 1;
+        }
+        for (child.out_ports) |p| {
+            outs[out_idx] = x_off + p;
+            out_idx += 1;
+        }
+        x_off += child.width + 1;
+    }
+    return .{ .width = total_w, .height = max_h, .grid = grid, .in_ports = ins, .out_ports = outs };
+}
+
+fn renderBlock(diag: Value, gc: *GC, allocator: std.mem.Allocator, depth: u32) RenderError!Block {
+    if (depth > RENDER_MAX_DEPTH) return error.InvalidDiagram;
+    if (!diag.isObj()) return error.TypeError;
+    const obj = diag.asObj();
+    if (obj.kind != .map) return error.TypeError;
+    const tag_val = mapGetByKeyword(obj, gc, "tag") orelse return error.InvalidDiagram;
+    const kind = parseKind(tag_val, gc) orelse return error.InvalidDiagram;
+    return switch (kind) {
+        .id => renderId(obj, gc, allocator),
+        .box => renderBox(obj, gc, allocator),
+        .spider => renderStub(obj, gc, allocator, "spider"),
+        .swap => renderStub(obj, gc, allocator, "swap"),
+        .seq => renderSeq(obj, gc, allocator, depth),
+        .tensor => renderTensor(obj, gc, allocator, depth),
+    };
+}
+
+/// Render a diagram (already produced by makeBox/makeSeq/etc.) as a UTF-8 ASCII string.
+/// Returned slice is owned by `allocator`.
+pub fn renderAscii(diag: Value, gc: *GC, allocator: std.mem.Allocator) ![]u8 {
+    var block = try renderBlock(diag, gc, allocator, 0);
+    defer block.deinit(allocator);
+
+    var out: std.ArrayListUnmanaged(u8) = .empty;
+    errdefer out.deinit(allocator);
+    var utf8_buf: [4]u8 = undefined;
+    var y: u32 = 0;
+    while (y < block.height) : (y += 1) {
+        var x: u32 = 0;
+        while (x < block.width) : (x += 1) {
+            const cp = block.grid[y * block.width + x];
+            const n = try std.unicode.utf8Encode(cp, &utf8_buf);
+            try out.appendSlice(allocator, utf8_buf[0..n]);
+        }
+        if (y + 1 < block.height) try out.append(allocator, '\n');
+    }
+    return out.toOwnedSlice(allocator);
+}
+
+pub fn diagramRenderAsciiFn(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Value {
+    if (args.len != 1) return error.ArityError;
+    const s = try renderAscii(args[0], gc, gc.allocator);
+    defer gc.allocator.free(s);
+    return Value.makeString(try gc.internString(s));
+}
+
+test "monoidal diagram: ascii renderer outputs labelled boxes for seq" {
+    var gc = GC.init(std.testing.allocator);
+    defer gc.deinit();
+
+    const A = try kw(&gc, "A");
+    const B = try kw(&gc, "B");
+    const C = try kw(&gc, "C");
+    const f = try makeBoxDiagram(&gc, Value.makeString(try gc.internString("f")), &.{A}, &.{B}, null);
+    const g = try makeBoxDiagram(&gc, Value.makeString(try gc.internString("g")), &.{B}, &.{C}, null);
+    var seq_args = [_]Value{ f, g };
+    const seq = try makeCompositeDiagram(&gc, .seq, seq_args[0..], false);
+
+    const out = try renderAscii(seq, &gc, std.testing.allocator);
+    defer std.testing.allocator.free(out);
+
+    try std.testing.expect(std.mem.indexOf(u8, out, "f") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "g") != null);
+    // Atomic skills render as white trapezoids.
+    try std.testing.expect(std.mem.indexOf(u8, out, "◁") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "▷") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "═") != null);
+    // Vertical wire glyph should appear (port stubs)
+    try std.testing.expect(std.mem.indexOf(u8, out, "│") != null);
+}
+
+test "monoidal diagram: ascii renderer handles tensor of two boxes" {
+    var gc = GC.init(std.testing.allocator);
+    defer gc.deinit();
+
+    const A = try kw(&gc, "A");
+    const B = try kw(&gc, "B");
+    const C = try kw(&gc, "C");
+    const D = try kw(&gc, "D");
+    const f = try makeBoxDiagram(&gc, Value.makeString(try gc.internString("f")), &.{A}, &.{B}, null);
+    const h = try makeBoxDiagram(&gc, Value.makeString(try gc.internString("h")), &.{C}, &.{D}, null);
+    var tensor_args = [_]Value{ f, h };
+    const tensor = try makeCompositeDiagram(&gc, .tensor, tensor_args[0..], false);
+
+    const out = try renderAscii(tensor, &gc, std.testing.allocator);
+    defer std.testing.allocator.free(out);
+
+    try std.testing.expect(std.mem.indexOf(u8, out, "f") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "h") != null);
+}
+
 test "monoidal diagram: sequential composition normalizes and preserves interfaces" {
     var gc = GC.init(std.testing.allocator);
     defer gc.deinit();

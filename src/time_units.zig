@@ -11,6 +11,7 @@
 //! Tower: TimeRef(14.112M) --×5--> glimpse(141.12M) --×3--> trice(423.36M) --×5--> trit-tick(2116.8M)
 
 const std = @import("std");
+const builtin = @import("builtin");
 const value = @import("value.zig");
 const Value = value.Value;
 const GC = @import("gc.zig").GC;
@@ -260,6 +261,67 @@ pub fn timeTowerFn(args: []Value, gc: *GC, _: *Env, _: *Resources) anyerror!Valu
         try m.data.map.vals.append(gc.allocator, Value.makeInt(@intCast(p.v)));
     }
     return Value.makeObj(m);
+}
+
+// ============================================================================
+// HIGH-RESOLUTION MONOTONIC CLOCKS (added 2026-04-28)
+// ============================================================================
+//
+//   (now-ns)  → nanoseconds since first call's start point
+//                 backed by clock_gettime(CLOCK_MONOTONIC_RAW), matching the
+//                 0.16-native clock path used elsewhere in nanoclj-zig.
+//   (now-tsc) → raw cycle counter, single-CPU-socket scope only
+//                 rdtscp on x86_64 (invariant TSC since Nehalem 2008,
+//                 nominal ~0.3 ns/cycle at 3 GHz); cntvct_el0 on aarch64
+//                 (24 MHz on Apple Silicon ≈ 41 ns/cycle).
+//
+// Use (- (now-tsc) (now-tsc)) to measure the read-call overhead itself.
+// See oxgame/.topos/time-resolution-floor.md for the full functoriality
+// table across in-CPU / same-machine / cross-network scopes.
+
+var _global_start_ns: ?u64 = null;
+
+fn monotonicRawNs() u64 {
+    // Freestanding/WASM has no libc clock. Keep the embedded profile
+    // deterministic and libc-free; native targets use MONOTONIC_RAW below.
+    if (builtin.os.tag == .freestanding) return 0;
+
+    var ts: std.c.timespec = undefined;
+    _ = std.c.clock_gettime(std.c.CLOCK.MONOTONIC_RAW, &ts);
+    return @as(u64, @intCast(ts.sec)) * 1_000_000_000 + @as(u64, @intCast(ts.nsec));
+}
+
+pub fn nowNsFn(args: []Value, _: *GC, _: *Env, _: *Resources) anyerror!Value {
+    if (args.len != 0) return error.ArityError;
+    const now = monotonicRawNs();
+    if (_global_start_ns == null) _global_start_ns = now;
+    return Value.makeInt(@intCast(now - _global_start_ns.?));
+}
+
+pub fn nowTscFn(args: []Value, _: *GC, _: *Env, _: *Resources) anyerror!Value {
+    if (args.len != 0) return error.ArityError;
+    const arch = @import("builtin").cpu.arch;
+    const cycles: u64 = switch (arch) {
+        .x86_64 => blk: {
+            var lo: u32 = undefined;
+            var hi: u32 = undefined;
+            asm volatile ("rdtscp"
+                : [_] "={eax}" (lo),
+                  [_] "={edx}" (hi),
+                :
+                : .{ .ecx = true });
+            break :blk (@as(u64, hi) << 32) | @as(u64, lo);
+        },
+        .aarch64 => blk: {
+            var v: u64 = undefined;
+            asm volatile ("mrs %[v], cntvct_el0"
+                : [v] "=r" (v),
+            );
+            break :blk v;
+        },
+        else => 0,
+    };
+    return Value.makeInt(@intCast(cycles));
 }
 
 // ============================================================================

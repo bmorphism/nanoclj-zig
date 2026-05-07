@@ -1,0 +1,13 @@
+runtime,op,ns_per_op,ops_per_sec,path
+bb,+ boxed,47,21289172,L2
+bb,:c m,44,22805745,L1
+bb,str/ends-with?,49,20525100,L1
+bb,assoc,66,15252621,L1
+bb,reduce + [10],138,7258721,L2
+bb,into [] filter,216,4640162,L2
+bb,re-find,135,7398501,L1
+bb,str/split /,394,2536890,L2
+bb,fs/exists?,1109,901970,L1
+bb,fs/list-dir 100,57172,17490,L1
+bb,fs/walk 100,416481,2401,L1
+bb,process build,2002274,499,L1

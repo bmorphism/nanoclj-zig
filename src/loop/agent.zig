@@ -15,20 +15,19 @@ const std = @import("std");
 const value = @import("../value.zig");
 const Value = value.Value;
 
-/// Callable signature for an agent body. `ctx` lets an Agent consult its own
-/// state / trace / env when invoked without threading them through args.
-pub const AgentFn = *const fn (ctx: *Agent, input: Value) error{Invoke}!Value;
-
 /// Monotonic agent id, assigned at registration time by the topology (later
 /// rungs). For unattached agents, 0 means "not-yet-registered".
 pub const AgentId = u32;
 
 /// An agent-o-nanoclj agent. Names are caller-owned slices (no duplication);
 /// callers typically intern them in the GC's string table.
+///
+/// The body function takes an opaque `*anyopaque` context (always a `*Agent`)
+/// to break the AgentFn ↔ Agent type cycle that Zig 0.15.2 detects.
 pub const Agent = struct {
     id: AgentId = 0,
     name: []const u8,
-    body: AgentFn,
+    body: *const fn (ctx: *anyopaque, input: Value) error{Invoke}!Value,
     /// Opaque per-agent state. Usually a `*Obj` tagged as `atom`/`ref`/`agent`
     /// from refs_agents.zig; stored as `?Value` so a stateless agent is expressible.
     state: ?Value = null,
@@ -36,7 +35,10 @@ pub const Agent = struct {
     /// invocation is started under a topology.
     trace_slot: ?*usize = null,
 
-    pub fn init(name: []const u8, body: AgentFn) Agent {
+    /// Callable signature for an agent body. `ctx` is always `*Agent`.
+    pub const BodyFn = *const fn (ctx: *anyopaque, input: Value) error{Invoke}!Value;
+
+    pub fn init(name: []const u8, body: BodyFn) Agent {
         return .{ .name = name, .body = body };
     }
 
@@ -53,6 +55,9 @@ pub const Agent = struct {
     }
 };
 
+/// Legacy type alias for callers. Same as Agent.BodyFn.
+pub const AgentFn = Agent.BodyFn;
+
 /// Helper for callers that have an AgentFn but don't yet want to allocate an
 /// Agent struct — useful during unit tests of agent bodies.
 pub fn invokeStateless(body: AgentFn, name: []const u8, input: Value) error{Invoke}!Value {
@@ -64,14 +69,12 @@ pub fn invokeStateless(body: AgentFn, name: []const u8, input: Value) error{Invo
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
-fn echoBody(_: *Agent, input: Value) error{Invoke}!Value {
+fn echoBody(_: *anyopaque, input: Value) error{Invoke}!Value {
     return input;
 }
 
-fn nameTagBody(ctx: *Agent, input: Value) error{Invoke}!Value {
-    // Silly body that returns something derived from the agent's name and the
-    // input, to show ctx is reachable. We just return the input unchanged in
-    // the no-GC test context; checking ctx.name.len is what exercises ctx.
+fn nameTagBody(raw_ctx: *anyopaque, input: Value) error{Invoke}!Value {
+    const ctx: *Agent = @ptrCast(@alignCast(raw_ctx));
     if (ctx.name.len == 0) return error.Invoke;
     return input;
 }

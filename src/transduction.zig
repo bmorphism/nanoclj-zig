@@ -316,10 +316,14 @@ pub fn evalBounded(val: Value, env: *Env, gc: *GC, res: *Resources) Domain {
                     if (!bval_d.isValue()) return bval_d;
                     loop_env.set(bname, bval_d.value) catch return Domain.fail(.type_error);
                 }
-                // Eval body, handle recur via signal
+                // Eval body, handle recur via signal. Termination is
+                // gated by fuel/depth inside `evalBounded` (Resources
+                // tracks both); no separate iteration cap. Earlier
+                // versions had `iterations < 10000` here which produced
+                // a misleading `type_error` at exactly 10k iters even
+                // when fuel was abundant — see commit message.
                 recur_pending = false;
-                var iterations: u32 = 0;
-                while (iterations < 10000) : (iterations += 1) {
+                while (true) {
                     var result = Domain.pure(Value.makeNil());
                     recur_pending = false;
                     for (items[2..]) |form| {
@@ -339,7 +343,6 @@ pub fn evalBounded(val: Value, env: *Env, gc: *GC, res: *Resources) Domain {
                     }
                     return result;
                 }
-                return Domain.fail(.type_error); // max iterations
             }
             // for: (for [x coll] body) — list comprehension
             if (std.mem.eql(u8, sname, "for")) {

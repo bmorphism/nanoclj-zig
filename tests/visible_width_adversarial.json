@@ -1,0 +1,863 @@
+{
+  "_doc" : "69 adversarial cases for OSC 8 visible-width across the Clojure family. Three semantic axes empirically grounded across joker (Go), nanoclj-zig (scanner), bb/clojure (JVM), and a hypothetical clojerl-byte (Erlang binary).",
+  "_minimal_bases" : [ [ "A", "E", "G" ], [ "C", "D", "G" ], [ "C", "E", "G" ] ],
+  "_galois_rank" : 3,
+  "_scope_note" : "Rank-2 claim from earlier versions held on the original 77-case adversarial corpus only. K1-K5 (variation selectors, BiDi overrides, NFC vs NFD normalization) falsify rank-2: no 2-basis distinguishes them from each other or from existing cases. Working 3-bases: {A,E,G}, {C,D,G}, {C,E,G}. Each adds the grapheme axis G as mandatory. Open-world caveat: rank may grow further with additional Unicode edge cases not yet exercised.",
+  "_axes" : {
+    "A" : "regex aborts frame on ESC in URI; scanner keeps consuming until BEL/ST",
+    "B" : "joker/zig/jvm count cells; clojerl-byte counts raw UTF-8 bytes",
+    "C" : "joker/zig count codepoints; jvm-family counts UTF-16 code units (surrogate pairs split)",
+    "E" : "scanner+byte: hand scanner + raw byte count",
+    "G" : "regex+grapheme: regex strip + extended grapheme cluster count",
+    "H" : "scanner+grapheme: scanner strip + extended grapheme cluster count"
+  },
+  "cases" : [ {
+    "expected_scanner" : 1,
+    "expected_jvm" : 1,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "A1: just ESC",
+    "expected_grapheme" : 1,
+    "input_hex" : "1b",
+    "expected_byte" : 1
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 2,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 2,
+    "name" : "A2: ESC ]",
+    "expected_grapheme" : 2,
+    "input_hex" : "1b5d",
+    "expected_byte" : 2
+  }, {
+    "expected_scanner" : 3,
+    "expected_jvm" : 3,
+    "expected_byte_scanner" : 3,
+    "expected_regex" : 3,
+    "expected_grapheme_scanner" : 3,
+    "name" : "A3: ESC ]8",
+    "expected_grapheme" : 3,
+    "input_hex" : "1b5d38",
+    "expected_byte" : 3
+  }, {
+    "expected_scanner" : 4,
+    "expected_jvm" : 4,
+    "expected_byte_scanner" : 4,
+    "expected_regex" : 4,
+    "expected_grapheme_scanner" : 4,
+    "name" : "A4: ESC ]8;",
+    "expected_grapheme" : 4,
+    "input_hex" : "1b5d383b",
+    "expected_byte" : 4
+  }, {
+    "expected_scanner" : 5,
+    "expected_jvm" : 5,
+    "expected_byte_scanner" : 5,
+    "expected_regex" : 5,
+    "expected_grapheme_scanner" : 5,
+    "name" : "A5: ESC ]8;;",
+    "expected_grapheme" : 5,
+    "input_hex" : "1b5d383b3b",
+    "expected_byte" : 5
+  }, {
+    "expected_scanner" : 8,
+    "expected_jvm" : 8,
+    "expected_byte_scanner" : 8,
+    "expected_regex" : 8,
+    "expected_grapheme_scanner" : 8,
+    "name" : "A6: opener-only no term",
+    "expected_grapheme" : 8,
+    "input_hex" : "1b5d383b3b75726c",
+    "expected_byte" : 8
+  }, {
+    "expected_scanner" : 0,
+    "expected_jvm" : 0,
+    "expected_byte_scanner" : 0,
+    "expected_regex" : 0,
+    "expected_grapheme_scanner" : 0,
+    "name" : "A7: empty frame",
+    "expected_grapheme" : 0,
+    "input_hex" : "1b5d383b3b07",
+    "expected_byte" : 0
+  }, {
+    "expected_scanner" : 14,
+    "expected_jvm" : 14,
+    "expected_byte_scanner" : 14,
+    "expected_regex" : 14,
+    "expected_grapheme_scanner" : 14,
+    "name" : "A8: opener URI no term",
+    "expected_grapheme" : 14,
+    "input_hex" : "1b5d383b3b68747470733a2f2f78",
+    "expected_byte" : 14
+  }, {
+    "expected_scanner" : 0,
+    "expected_jvm" : 0,
+    "expected_byte_scanner" : 0,
+    "expected_regex" : 0,
+    "expected_grapheme_scanner" : 0,
+    "name" : "A9: opener BEL truncated mid",
+    "expected_grapheme" : 0,
+    "input_hex" : "1b5d383b3b7507",
+    "expected_byte" : 0
+  }, {
+    "expected_scanner" : 105,
+    "expected_jvm" : 105,
+    "expected_byte_scanner" : 105,
+    "expected_regex" : 105,
+    "expected_grapheme_scanner" : 105,
+    "name" : "A10: opener no term long URI",
+    "expected_grapheme" : 105,
+    "input_hex" : "1b5d383b3b61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161",
+    "expected_byte" : 105
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 12,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 12,
+    "expected_grapheme_scanner" : 1,
+    "name" : "B1: ESC in URI then BEL",
+    "expected_grapheme" : 12,
+    "input_hex" : "1b5d383b3b61621b596c074c1b5d383b3b07",
+    "expected_byte" : 12
+  }, {
+    "expected_scanner" : 4,
+    "expected_jvm" : 4,
+    "expected_byte_scanner" : 4,
+    "expected_regex" : 4,
+    "expected_grapheme_scanner" : 4,
+    "name" : "B2: ESC \\ inside URI",
+    "expected_grapheme" : 4,
+    "input_hex" : "1b5d383b3b61621b5c596c074c1b5d383b3b07",
+    "expected_byte" : 4
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 13,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 13,
+    "expected_grapheme_scanner" : 1,
+    "name" : "B3: two ESCs in URI",
+    "expected_grapheme" : 13,
+    "input_hex" : "1b5d383b3b611b621b636c074c1b5d383b3b07",
+    "expected_byte" : 13
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 11,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 11,
+    "expected_grapheme_scanner" : 1,
+    "name" : "B4: ESC at end of URI",
+    "expected_grapheme" : 11,
+    "input_hex" : "1b5d383b3b75726c1b074c1b5d383b3b07",
+    "expected_byte" : 11
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 11,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 11,
+    "expected_grapheme_scanner" : 1,
+    "name" : "B5: ESC start of URI",
+    "expected_grapheme" : 11,
+    "input_hex" : "1b5d383b3b1b75726c074c1b5d383b3b07",
+    "expected_byte" : 11
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 8,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 8,
+    "expected_grapheme_scanner" : 1,
+    "name" : "B6: only ESC as URI",
+    "expected_grapheme" : 8,
+    "input_hex" : "1b5d383b3b1b074c1b5d383b3b07",
+    "expected_byte" : 8
+  }, {
+    "expected_scanner" : 12,
+    "expected_jvm" : 12,
+    "expected_byte_scanner" : 12,
+    "expected_regex" : 12,
+    "expected_grapheme_scanner" : 12,
+    "name" : "B7: ESC in URI no terminator",
+    "expected_grapheme" : 12,
+    "input_hex" : "1b5d383b3b611b621b631b64",
+    "expected_byte" : 12
+  }, {
+    "expected_scanner" : 5,
+    "expected_jvm" : 15,
+    "expected_byte_scanner" : 5,
+    "expected_regex" : 15,
+    "expected_grapheme_scanner" : 5,
+    "name" : "B8: ESC in URI mismatched ST",
+    "expected_grapheme" : 15,
+    "input_hex" : "1b5d383b3b61621b58076166746572",
+    "expected_byte" : 15
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 10,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 10,
+    "expected_grapheme_scanner" : 1,
+    "name" : "B9: ESC in URI bell after",
+    "expected_grapheme" : 10,
+    "input_hex" : "1b5d383b3b611b620763",
+    "expected_byte" : 10
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 11,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 11,
+    "expected_grapheme_scanner" : 1,
+    "name" : "B10: ESC in URI ST after",
+    "expected_grapheme" : 11,
+    "input_hex" : "1b5d383b3b611b621b5c63",
+    "expected_byte" : 11
+  }, {
+    "expected_scanner" : 4,
+    "expected_jvm" : 4,
+    "expected_byte_scanner" : 4,
+    "expected_regex" : 4,
+    "expected_grapheme_scanner" : 4,
+    "name" : "C1: 2 frames touching",
+    "expected_grapheme" : 4,
+    "input_hex" : "1b5d383b3b7531074c311b5d383b3b071b5d383b3b7532074c321b5d383b3b07",
+    "expected_byte" : 4
+  }, {
+    "expected_scanner" : 3,
+    "expected_jvm" : 3,
+    "expected_byte_scanner" : 3,
+    "expected_regex" : 3,
+    "expected_grapheme_scanner" : 3,
+    "name" : "C2: 2 frames space-sep",
+    "expected_grapheme" : 3,
+    "input_hex" : "1b5d383b3b7507611b5d383b3b07201b5d383b3b7607621b5d383b3b07",
+    "expected_byte" : 3
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 6,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 6,
+    "expected_grapheme_scanner" : 1,
+    "name" : "C3: opener inside URI",
+    "expected_grapheme" : 6,
+    "input_hex" : "1b5d383b3b1b5d383b3b75074c1b5d383b3b07",
+    "expected_byte" : 6
+  }, {
+    "expected_scanner" : 11,
+    "expected_jvm" : 11,
+    "expected_byte_scanner" : 11,
+    "expected_regex" : 11,
+    "expected_grapheme_scanner" : 11,
+    "name" : "C4: two openers no terms",
+    "expected_grapheme" : 11,
+    "input_hex" : "1b5d383b3b1b5d383b3b75",
+    "expected_byte" : 11
+  }, {
+    "expected_scanner" : 3,
+    "expected_jvm" : 3,
+    "expected_byte_scanner" : 3,
+    "expected_regex" : 3,
+    "expected_grapheme_scanner" : 3,
+    "name" : "C5: 3 frames chain",
+    "expected_grapheme" : 3,
+    "input_hex" : "1b5d383b3b61074c1b5d383b3b071b5d383b3b62074c1b5d383b3b071b5d383b3b63074c1b5d383b3b07",
+    "expected_byte" : 3
+  }, {
+    "expected_scanner" : 6,
+    "expected_jvm" : 6,
+    "expected_byte_scanner" : 6,
+    "expected_regex" : 6,
+    "expected_grapheme_scanner" : 6,
+    "name" : "C6: opener after closer",
+    "expected_grapheme" : 6,
+    "input_hex" : "1b5d383b3b75074c1b5d383b3b0765787472611b5d383b3b07",
+    "expected_byte" : 6
+  }, {
+    "expected_scanner" : 0,
+    "expected_jvm" : 0,
+    "expected_byte_scanner" : 0,
+    "expected_regex" : 0,
+    "expected_grapheme_scanner" : 0,
+    "name" : "C7: closer-only twice",
+    "expected_grapheme" : 0,
+    "input_hex" : "1b5d383b3b071b5d383b3b07",
+    "expected_byte" : 0
+  }, {
+    "expected_scanner" : 0,
+    "expected_jvm" : 0,
+    "expected_byte_scanner" : 0,
+    "expected_regex" : 0,
+    "expected_grapheme_scanner" : 0,
+    "name" : "C8: opener BEL opener BEL",
+    "expected_grapheme" : 0,
+    "input_hex" : "1b5d383b3b071b5d383b3b07",
+    "expected_byte" : 0
+  }, {
+    "expected_scanner" : 13,
+    "expected_jvm" : 13,
+    "expected_byte_scanner" : 13,
+    "expected_regex" : 13,
+    "expected_grapheme_scanner" : 13,
+    "name" : "C9: OSC8 then OSC8 partial",
+    "expected_grapheme" : 13,
+    "input_hex" : "1b5d383b3b75076c61621b5d383b3b071b5d383b3b7472756e63",
+    "expected_byte" : 13
+  }, {
+    "expected_scanner" : 5,
+    "expected_jvm" : 5,
+    "expected_byte_scanner" : 5,
+    "expected_regex" : 5,
+    "expected_grapheme_scanner" : 5,
+    "name" : "C10: 5 quick frames",
+    "expected_grapheme" : 5,
+    "input_hex" : "1b5d383b3b7507781b5d383b3b071b5d383b3b7507781b5d383b3b071b5d383b3b7507781b5d383b3b071b5d383b3b7507781b5d383b3b071b5d383b3b7507781b5d383b3b07",
+    "expected_byte" : 5
+  }, {
+    "expected_scanner" : 4,
+    "expected_jvm" : 4,
+    "expected_byte_scanner" : 5,
+    "expected_regex" : 4,
+    "expected_grapheme_scanner" : 4,
+    "name" : "D1: 2-byte é alone",
+    "expected_grapheme" : 4,
+    "input_hex" : "636166c3a9",
+    "expected_byte" : 5
+  }, {
+    "expected_scanner" : 4,
+    "expected_jvm" : 4,
+    "expected_byte_scanner" : 5,
+    "expected_regex" : 4,
+    "expected_grapheme_scanner" : 4,
+    "name" : "D2: 2-byte ü in label",
+    "expected_grapheme" : 4,
+    "input_hex" : "1b5d383b3b7507c3bc6265721b5d383b3b07",
+    "expected_byte" : 5
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 6,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 2,
+    "name" : "D3: 3-byte CJK alone",
+    "expected_grapheme" : 2,
+    "input_hex" : "e4b8ade69687",
+    "expected_byte" : 6
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 6,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 2,
+    "name" : "D4: 3-byte CJK in label",
+    "expected_grapheme" : 2,
+    "input_hex" : "1b5d383b3b7507e4b8ade696871b5d383b3b07",
+    "expected_byte" : 6
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 4,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "D5: 4-byte emoji alone",
+    "expected_grapheme" : 1,
+    "input_hex" : "f09f9880",
+    "expected_byte" : 4
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 4,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "D6: 4-byte emoji in label",
+    "expected_grapheme" : 1,
+    "input_hex" : "1b5d383b3b7507f09f98801b5d383b3b07",
+    "expected_byte" : 4
+  }, {
+    "expected_scanner" : 4,
+    "expected_jvm" : 4,
+    "expected_byte_scanner" : 5,
+    "expected_regex" : 4,
+    "expected_grapheme_scanner" : 4,
+    "name" : "D7: combining é",
+    "expected_grapheme" : 4,
+    "input_hex" : "636166c3a9",
+    "expected_byte" : 5
+  }, {
+    "expected_scanner" : 4,
+    "expected_jvm" : 4,
+    "expected_byte_scanner" : 5,
+    "expected_regex" : 4,
+    "expected_grapheme_scanner" : 4,
+    "name" : "D8: combining in label",
+    "expected_grapheme" : 4,
+    "input_hex" : "1b5d383b3b7507636166c3a91b5d383b3b07",
+    "expected_byte" : 5
+  }, {
+    "expected_scanner" : 3,
+    "expected_jvm" : 5,
+    "expected_byte_scanner" : 11,
+    "expected_regex" : 3,
+    "expected_grapheme_scanner" : 1,
+    "name" : "D9: ZWJ family",
+    "expected_grapheme" : 1,
+    "input_hex" : "f09f91a8e2808df09f91a9",
+    "expected_byte" : 11
+  }, {
+    "expected_scanner" : 3,
+    "expected_jvm" : 3,
+    "expected_byte_scanner" : 5,
+    "expected_regex" : 3,
+    "expected_grapheme_scanner" : 3,
+    "name" : "D10: BOM+text",
+    "expected_grapheme" : 3,
+    "input_hex" : "efbbbf6869",
+    "expected_byte" : 5
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 1,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "E1: opener BEL term",
+    "expected_grapheme" : 1,
+    "input_hex" : "1b5d383b3b75074c1b5d383b3b07",
+    "expected_byte" : 1
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 1,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "E2: opener ST term",
+    "expected_grapheme" : 1,
+    "input_hex" : "1b5d383b3b751b5c4c1b5d383b3b1b5c",
+    "expected_byte" : 1
+  }, {
+    "expected_scanner" : 6,
+    "expected_jvm" : 6,
+    "expected_byte_scanner" : 6,
+    "expected_regex" : 6,
+    "expected_grapheme_scanner" : 6,
+    "name" : "E3: lone ST 2 bytes",
+    "expected_grapheme" : 6,
+    "input_hex" : "1b5c72657374",
+    "expected_byte" : 6
+  }, {
+    "expected_scanner" : 5,
+    "expected_jvm" : 5,
+    "expected_byte_scanner" : 5,
+    "expected_regex" : 5,
+    "expected_grapheme_scanner" : 5,
+    "name" : "E4: lone BEL",
+    "expected_grapheme" : 5,
+    "input_hex" : "0772657374",
+    "expected_byte" : 5
+  }, {
+    "expected_scanner" : 5,
+    "expected_jvm" : 5,
+    "expected_byte_scanner" : 5,
+    "expected_regex" : 5,
+    "expected_grapheme_scanner" : 5,
+    "name" : "E5: BEL outside any frame",
+    "expected_grapheme" : 5,
+    "input_hex" : "6162076364",
+    "expected_byte" : 5
+  }, {
+    "expected_scanner" : 6,
+    "expected_jvm" : 6,
+    "expected_byte_scanner" : 6,
+    "expected_regex" : 6,
+    "expected_grapheme_scanner" : 6,
+    "name" : "E6: ESC \\ outside any frame",
+    "expected_grapheme" : 6,
+    "input_hex" : "61621b5c6364",
+    "expected_byte" : 6
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 1,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "E7: opener URI ST term",
+    "expected_grapheme" : 1,
+    "input_hex" : "1b5d383b3b75726c1b5c581b5d383b3b1b5c",
+    "expected_byte" : 1
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 13,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 13,
+    "expected_grapheme_scanner" : 1,
+    "name" : "E8: opener URI ESC X (not ST)",
+    "expected_grapheme" : 13,
+    "input_hex" : "1b5d383b3b75726c1b5859074c1b5d383b3b07",
+    "expected_byte" : 13
+  }, {
+    "expected_scanner" : 0,
+    "expected_jvm" : 0,
+    "expected_byte_scanner" : 0,
+    "expected_regex" : 0,
+    "expected_grapheme_scanner" : 0,
+    "name" : "E9: BEL then ST",
+    "expected_grapheme" : 0,
+    "input_hex" : "1b5d383b3b071b5d383b3b1b5c",
+    "expected_byte" : 0
+  }, {
+    "expected_scanner" : 0,
+    "expected_jvm" : 0,
+    "expected_byte_scanner" : 0,
+    "expected_regex" : 0,
+    "expected_grapheme_scanner" : 0,
+    "name" : "E10: ST then BEL",
+    "expected_grapheme" : 0,
+    "input_hex" : "1b5d383b3b1b5c1b5d383b3b07",
+    "expected_byte" : 0
+  }, {
+    "expected_scanner" : 12,
+    "expected_jvm" : 12,
+    "expected_byte_scanner" : 12,
+    "expected_regex" : 12,
+    "expected_grapheme_scanner" : 12,
+    "name" : "F1: OSC 0 title",
+    "expected_grapheme" : 12,
+    "input_hex" : "1b5d303b7469746c65076869",
+    "expected_byte" : 12
+  }, {
+    "expected_scanner" : 11,
+    "expected_jvm" : 11,
+    "expected_byte_scanner" : 11,
+    "expected_regex" : 11,
+    "expected_grapheme_scanner" : 11,
+    "name" : "F2: OSC 1 icon",
+    "expected_grapheme" : 11,
+    "input_hex" : "1b5d313b69636f6e076869",
+    "expected_byte" : 11
+  }, {
+    "expected_scanner" : 10,
+    "expected_jvm" : 10,
+    "expected_byte_scanner" : 10,
+    "expected_regex" : 10,
+    "expected_grapheme_scanner" : 10,
+    "name" : "F3: OSC 2 window title",
+    "expected_grapheme" : 10,
+    "input_hex" : "1b5d323b77696e076869",
+    "expected_byte" : 10
+  }, {
+    "expected_scanner" : 16,
+    "expected_jvm" : 16,
+    "expected_byte_scanner" : 16,
+    "expected_regex" : 16,
+    "expected_grapheme_scanner" : 16,
+    "name" : "F4: OSC 7 cwd",
+    "expected_grapheme" : 16,
+    "input_hex" : "1b5d373b66696c653a2f2f2f78076869",
+    "expected_byte" : 16
+  }, {
+    "expected_scanner" : 11,
+    "expected_jvm" : 11,
+    "expected_byte_scanner" : 11,
+    "expected_regex" : 11,
+    "expected_grapheme_scanner" : 11,
+    "name" : "F5: OSC 9 notify",
+    "expected_grapheme" : 11,
+    "input_hex" : "1b5d393b70696e67076869",
+    "expected_byte" : 11
+  }, {
+    "expected_scanner" : 12,
+    "expected_jvm" : 12,
+    "expected_byte_scanner" : 12,
+    "expected_regex" : 12,
+    "expected_grapheme_scanner" : 12,
+    "name" : "F6: OSC 10 fg color",
+    "expected_grapheme" : 12,
+    "input_hex" : "1b5d31303b23666666076869",
+    "expected_byte" : 12
+  }, {
+    "expected_scanner" : 14,
+    "expected_jvm" : 14,
+    "expected_byte_scanner" : 14,
+    "expected_regex" : 14,
+    "expected_grapheme_scanner" : 14,
+    "name" : "F7: OSC 52 clipboard",
+    "expected_grapheme" : 14,
+    "input_hex" : "1b5d35323b633b5a6d3976076869",
+    "expected_byte" : 14
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 1,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "F8: OSC 8 (ours)",
+    "expected_grapheme" : 1,
+    "input_hex" : "1b5d383b3b75074c1b5d383b3b07",
+    "expected_byte" : 1
+  }, {
+    "expected_scanner" : 9,
+    "expected_jvm" : 9,
+    "expected_byte_scanner" : 9,
+    "expected_regex" : 9,
+    "expected_grapheme_scanner" : 9,
+    "name" : "F9: OSC 88 (3 digits)",
+    "expected_grapheme" : 9,
+    "input_hex" : "1b5d38383b78076869",
+    "expected_byte" : 9
+  }, {
+    "expected_scanner" : 15,
+    "expected_jvm" : 15,
+    "expected_byte_scanner" : 15,
+    "expected_regex" : 15,
+    "expected_grapheme_scanner" : 15,
+    "name" : "F10: OSC 8 prefix-shadow",
+    "expected_grapheme" : 15,
+    "input_hex" : "1b5d38303b6e6f746f736338076869",
+    "expected_byte" : 15
+  }, {
+    "expected_scanner" : 0,
+    "expected_jvm" : 0,
+    "expected_byte_scanner" : 0,
+    "expected_regex" : 0,
+    "expected_grapheme_scanner" : 0,
+    "name" : "G1: empty URI empty label",
+    "expected_grapheme" : 0,
+    "input_hex" : "1b5d383b3b071b5d383b3b07",
+    "expected_byte" : 0
+  }, {
+    "expected_scanner" : 50,
+    "expected_jvm" : 50,
+    "expected_byte_scanner" : 50,
+    "expected_regex" : 50,
+    "expected_grapheme_scanner" : 50,
+    "name" : "G2: empty URI long label",
+    "expected_grapheme" : 50,
+    "input_hex" : "1b5d383b3b074c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c1b5d383b3b07",
+    "expected_byte" : 50
+  }, {
+    "expected_scanner" : 0,
+    "expected_jvm" : 0,
+    "expected_byte_scanner" : 0,
+    "expected_regex" : 0,
+    "expected_grapheme_scanner" : 0,
+    "name" : "G3: long URI empty label",
+    "expected_grapheme" : 0,
+    "input_hex" : "1b5d383b3b5555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555071b5d383b3b07",
+    "expected_byte" : 0
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 1,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "G4: id= param + URI",
+    "expected_grapheme" : 1,
+    "input_hex" : "1b5d383b69643d783b68747470733a2f2f652e636f6d074c1b5d383b3b07",
+    "expected_byte" : 1
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 1,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "G5: multi-param + URI",
+    "expected_grapheme" : 1,
+    "input_hex" : "1b5d383b69643d783a666f6f3d793b75074c1b5d383b3b07",
+    "expected_byte" : 1
+  }, {
+    "expected_scanner" : 22,
+    "expected_jvm" : 22,
+    "expected_byte_scanner" : 22,
+    "expected_regex" : 22,
+    "expected_grapheme_scanner" : 22,
+    "name" : "G6: only opener no terminator",
+    "expected_grapheme" : 22,
+    "input_hex" : "1b5d383b69643d6c6f6e672d69642d6e6f2d7465726d",
+    "expected_byte" : 22
+  }, {
+    "expected_scanner" : 3,
+    "expected_jvm" : 3,
+    "expected_byte_scanner" : 3,
+    "expected_regex" : 3,
+    "expected_grapheme_scanner" : 3,
+    "name" : "G7: BEL inside id= param",
+    "expected_grapheme" : 3,
+    "input_hex" : "1b5d383b69643d0775074c1b5d383b3b07",
+    "expected_byte" : 3
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 1,
+    "expected_byte_scanner" : 1,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "G8: tab in URI (allowed)",
+    "expected_grapheme" : 1,
+    "input_hex" : "1b5d383b3b7509726c074c1b5d383b3b07",
+    "expected_byte" : 1
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 2,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 2,
+    "name" : "G9: DEL byte in label",
+    "expected_grapheme" : 2,
+    "input_hex" : "1b5d383b3b750761621b5d383b3b07",
+    "expected_byte" : 2
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 11,
+    "expected_byte_scanner" : 4,
+    "expected_regex" : 10,
+    "expected_grapheme_scanner" : 1,
+    "name" : "Z: all-axes witness (esc-in-uri + 4-byte emoji + closer)",
+    "expected_grapheme" : 10,
+    "n_distinct" : 4,
+    "input_hex" : "1b5d383b3b611b6207f09f98801b5d383b3b07",
+    "expected_byte" : 13
+  }, {
+    "expected_scanner" : 7,
+    "expected_jvm" : 11,
+    "expected_byte_scanner" : 25,
+    "expected_regex" : 7,
+    "expected_grapheme_scanner" : 1,
+    "name" : "H1: family of 4 (ZWJ × 3)",
+    "expected_grapheme" : 1,
+    "input_hex" : "f09f91a8e2808df09f91a9e2808df09f91a7e2808df09f91a6",
+    "expected_byte" : 25
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 4,
+    "expected_byte_scanner" : 8,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 1,
+    "name" : "H2: skin-tone hand",
+    "expected_grapheme" : 1,
+    "input_hex" : "f09f918bf09f8fbd",
+    "expected_byte" : 8
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 4,
+    "expected_byte_scanner" : 8,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 1,
+    "name" : "H3: flag US",
+    "expected_grapheme" : 1,
+    "input_hex" : "f09f87baf09f87b8",
+    "expected_byte" : 8
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 3,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 1,
+    "name" : "H4: combining e + acute",
+    "expected_grapheme" : 1,
+    "input_hex" : "65cc81",
+    "expected_byte" : 3
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 1,
+    "expected_byte_scanner" : 2,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "H5: precomposed é",
+    "expected_grapheme" : 1,
+    "input_hex" : "c3a9",
+    "expected_byte" : 2
+  }, {
+    "expected_scanner" : 7,
+    "expected_jvm" : 11,
+    "expected_byte_scanner" : 25,
+    "expected_regex" : 7,
+    "expected_grapheme_scanner" : 1,
+    "name" : "H6: family-in-link",
+    "expected_grapheme" : 1,
+    "input_hex" : "1b5d383b3b7507f09f91a8e2808df09f91a9e2808df09f91a7e2808df09f91a61b5d383b3b07",
+    "expected_byte" : 25
+  }, {
+    "expected_scanner" : 7,
+    "expected_jvm" : 20,
+    "expected_byte_scanner" : 25,
+    "expected_regex" : 16,
+    "expected_grapheme_scanner" : 1,
+    "name" : "Z2: 7-distinct attempt (ESC-in-URI + family label + closer)",
+    "expected_grapheme" : 10,
+    "input_hex" : "1b5d383b3b611b6207f09f91a8e2808df09f91a9e2808df09f91a7e2808df09f91a61b5d383b3b07",
+    "expected_byte" : 34
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 4,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 1,
+    "name" : "K1: a + variation-selector U+FE0F",
+    "expected_grapheme" : 1,
+    "input_hex" : "61efb88f",
+    "expected_byte" : 4
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 4,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 2,
+    "name" : "K2: RTL-override + a",
+    "expected_grapheme" : 2,
+    "input_hex" : "e280ae61",
+    "expected_byte" : 4
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 4,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 2,
+    "name" : "K3: LTR-override + a",
+    "expected_grapheme" : 2,
+    "input_hex" : "e280ad61",
+    "expected_byte" : 4
+  }, {
+    "expected_scanner" : 2,
+    "expected_jvm" : 2,
+    "expected_byte_scanner" : 3,
+    "expected_regex" : 2,
+    "expected_grapheme_scanner" : 1,
+    "name" : "K4: combining-é (NFD: e + U+0301)",
+    "expected_grapheme" : 1,
+    "input_hex" : "65cc81",
+    "expected_byte" : 3
+  }, {
+    "expected_scanner" : 1,
+    "expected_jvm" : 1,
+    "expected_byte_scanner" : 2,
+    "expected_regex" : 1,
+    "expected_grapheme_scanner" : 1,
+    "name" : "K5: precomposed-é (NFC)",
+    "expected_grapheme" : 1,
+    "input_hex" : "c3a9",
+    "expected_byte" : 2
+  } ],
+  "_summary" : {
+    "total" : 77,
+    "n_distinct" : {
+      "1" : 49,
+      "2" : 18,
+      "3" : 3,
+      "4" : 5,
+      "5" : 1,
+      "7" : 1
+    }
+  },
+  "_runtimes_witnessed" : {
+    "A" : "joker basilisp glojure",
+    "B" : "bb clojure nbb cherry squint",
+    "C" : "nanoclj-zig lokke(hand-scan)",
+    "D" : "jank",
+    "E" : "jo_clojure (byte mode)"
+  },
+  "_runtimes" : {
+    "joker" : "Go RE2 + rune count",
+    "zig" : "hand scanner + UTF-8 leading byte count",
+    "byte" : "regex strip + raw UTF-8 byte count (clojerl-style)",
+    "jvm" : "java.util.regex + UTF-16 char count (clojure/bb/nbb/clojure-clr)",
+    "byte_scanner" : "jo_clojure (hand scanner + byte count via nth)",
+    "grapheme" : "synthesized via java.text.BreakIterator (Graal/JVM, ICU)",
+    "grapheme_scanner" : "synthesized via scanner strip + java.text.BreakIterator"
+  }
+}

@@ -36,6 +36,8 @@ pub const skill = @import("loop/skill.zig");
 pub const builtins = @import("loop/builtins.zig");
 pub const bench_skills = @import("loop/bench_skills.zig");
 pub const parallel_skills = @import("loop/parallel_skills.zig");
+pub const stellogen = @import("loop/stellogen.zig");
+pub const stellogen_skills = @import("loop/stellogen_skills.zig");
 
 /// Skill registry — SDF-style extension surface.
 /// Extending: add to a submodule's `skills` slice; this fold picks it up.
@@ -44,8 +46,11 @@ pub const SkillFn = skill.SkillFn;
 pub const skillCombine = skill.combine;
 pub const skillLookup = skill.lookup;
 pub const skills: []const Skill = skill.combine(
-    skill.combine(&builtins.skills, &bench_skills.skills),
-    &parallel_skills.skills,
+    skill.combine(
+        skill.combine(&builtins.skills, &bench_skills.skills),
+        &parallel_skills.skills,
+    ),
+    &stellogen_skills.skills,
 );
 
 /// Rung 1: Agent primitive.
@@ -129,6 +134,22 @@ pub const GradientError = gradient.GradientError;
 pub const traceGradient = gradient.traceGradient;
 pub const cycleByGradient = gradient.cycleByGradient;
 
+/// Stellogen — polarity-driven constellation resolution (GF(3) bridge).
+pub const StellarPolarity = stellogen.Polarity;
+pub const StellarRay = stellogen.Ray;
+pub const StellarStar = stellogen.Star;
+pub const StellarConstellation = stellogen.Constellation;
+pub const stellogenFire = stellogen.fire;
+pub const stellogenExec = stellogen.exec;
+pub const stellogenProcess = stellogen.process;
+pub const stellogenUseImport = stellogen.useImport;
+pub const stellogenDefaultLoader = stellogen.defaultLoader;
+
+/// Stellogen S-expression handoff serialization (TOFU envelope).
+pub const stellogen_sexp = @import("loop/stellogen_sexp.zig");
+pub const serializeConstellation = stellogen_sexp.serializeConstellation;
+pub const parseConstellationSexp = stellogen_sexp.parseConstellationSexp;
+
 /// Unified cycle combinator (§6.3) — Step × Stop × Frontier → Trajectory.
 pub const Step = cycle_lib.Step;
 pub const Stop = cycle_lib.Stop;
@@ -155,5 +176,7 @@ test {
     _ = builtins;
     _ = bench_skills;
     _ = parallel_skills;
+    _ = stellogen;
+    _ = stellogen_sexp;
     _ = @import("loop/world_test.zig");
 }

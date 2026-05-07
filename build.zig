@@ -258,6 +258,19 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_unit_tests.step);
 
+    // Joker parity: OSC 8 hyperlink-aware visible-width tests.
+    const visible_width_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/visible_width.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_visible_width_tests = b.addRunArtifact(visible_width_tests);
+    const visible_width_test_step = b.step("visible-width-test", "Run OSC 8 visible-width tests");
+    visible_width_test_step.dependOn(&run_visible_width_tests.step);
+    test_step.dependOn(&run_visible_width_tests.step);
+
     // loop.zig standalone tests (agent-o-nanoclj feedback-loop core)
     const loop_tests = b.addTest(.{
         .root_module = b.createModule(.{
@@ -302,6 +315,59 @@ pub fn build(b: *std.Build) void {
     const run_flow_value_tests = b.addRunArtifact(flow_value_tests);
     const flow_value_test_step = b.step("flow-value-test", "Run flow_value.zig Clojure↔Zig bridge tests");
     flow_value_test_step.dependOn(&run_flow_value_tests.step);
+
+    // beeper.zig: Bumpus time-travel beeper client (Syrup, OKLAB, SplitTree)
+    const beeper_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/beeper.zig"),
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+            .imports = &.{
+                .{ .name = "syrup", .module = syrup_mod },
+                .{ .name = "build_options", .module = full_build_options },
+            },
+        }),
+    });
+    const run_beeper_tests = b.addRunArtifact(beeper_tests);
+    const beeper_test_step = b.step("beeper-test", "Run beeper.zig Bumpus time-travel client tests");
+    beeper_test_step.dependOn(&run_beeper_tests.step);
+    test_step.dependOn(&run_beeper_tests.step);
+
+    // stellogen: stellar resolution / interaction nets library.
+    // Exposed as a named module so downstream packages can:
+    //   const stellogen = b.dependency("nanoclj_zig", .{}).module("stellogen");
+    _ = b.addModule("stellogen", .{
+        .root_source_file = b.path("src/loop/stellogen.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // stellogen standalone tests
+    const stellogen_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/loop/stellogen.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_stellogen_tests = b.addRunArtifact(stellogen_tests);
+    const stellogen_test_step = b.step("stellogen-test", "Run stellogen stellar-resolution tests");
+    stellogen_test_step.dependOn(&run_stellogen_tests.step);
+    test_step.dependOn(&run_stellogen_tests.step);
+
+    // stellogen_sexp standalone tests
+    const stellogen_sexp_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/loop/stellogen_sexp.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_stellogen_sexp_tests = b.addRunArtifact(stellogen_sexp_tests);
+    const stellogen_sexp_test_step = b.step("stellogen-sexp-test", "Run stellogen s-expression serialization tests");
+    stellogen_sexp_test_step.dependOn(&run_stellogen_sexp_tests.step);
+    test_step.dependOn(&run_stellogen_sexp_tests.step);
 
     // .topos/bench harness — BMF-JSON microbenchmarks.
     // Streams per-bench JSON to stdout; pipe to `bencher run --adapter json`

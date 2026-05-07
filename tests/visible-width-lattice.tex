@@ -1,0 +1,193 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=2cm,landscape]{geometry}
+\usepackage[all]{xy}
+\usepackage{amsmath,amssymb}
+\usepackage{microtype}
+
+\title{Clojure-family \texttt{visible-width} as a 4$\times$2 lattice\\
+{\large empirical Galois rank, falsification cascade, and the (lookup $\dashv$ forget) adjunction}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{1. The 4$\times$2 cell lattice}
+
+Each Clojure runtime's \texttt{visible-width} is a single point in
+$\{\text{regex}, \text{scanner}\} \times \{\text{byte}, \text{u16}, \text{cp}, \text{graph}\}$.
+Seven of eight cells are occupied; the (\textsf{scanner}, u16) cell is structurally
+empty because no runtime hand-walks UTF-16 surrogates while doing OSC 8 scanning.
+Diagonal dotted arrows are the ``forgetful refinement'' maps from finer to coarser counts.
+
+\[
+\xymatrix@C=4em@R=4em{
+                 & \text{byte}
+                 & \text{u16}
+                 & \text{cp}
+                 & \text{grapheme} \\
+  \text{regex}  &
+       *+[F]{D}\ar[r]\ar@{.>}[rr]\ar@{.>}[rrr]
+       &
+       *+[F]{B}\ar[r]\ar@{.>}[rr]
+       &
+       *+[F]{A}\ar[r] &
+       *+[F]{G} \\
+  \text{scanner}&
+       *+[F]{E}\ar[uu]\ar@{.>}[rr]\ar@{.>}[rrr]
+       &
+       *++[o][F.]{\bigotimes}
+       &
+       *+[F]{C}\ar[uu]\ar[r] &
+       *+[F]{H}\ar[uu]
+}
+\]
+
+The \texttt{$\bigotimes$} marker is the structurally-empty cell.
+Vertical arrows are ``swap strip mode''; horizontal/diagonal arrows are
+``coarsen the count.'' All paths from \emph{D} (lower-left) to \emph{H}
+(upper-right) commute up to natural isomorphism.
+
+\newpage
+\section*{2. Cross-runtime evaluation as a 2-categorical pyramid}
+
+Source code is parsed identically in every Clojureme; evaluation diverges
+into per-runtime functors $\mathsf{eval}_X$ producing values in
+profile-tagged $\mathbb{N}$. The horizontal natural transformations
+$T_{AB}$ are the cross-runtime translations; the vertical $\Downarrow\alpha$
+2-cells witness commutativity at the \emph{value} layer.
+
+\[
+\xymatrix@C=4em@R=3em{
+   & & \mathbf{Source}\ar[dll]_{\mathsf{parse}}\ar[d]^{\mathsf{parse}}\ar[drr]^{\mathsf{parse}} & & \\
+   \mathbf{AST}_A\ar[d]_{\mathsf{eval}_A}
+       \ar@/^1pc/[rr]^{T_{AB}}
+   & & \mathbf{AST}_B\ar[d]^{\mathsf{eval}_B}
+       \ar@/^1pc/[rr]^{T_{BC}}
+   & & \mathbf{AST}_C\ar[d]^{\mathsf{eval}_C} \\
+   \mathbb{N}_{(\textsf{regex},\textsf{cp})}
+       \ar[d]_{\pi_A}
+   & & \mathbb{N}_{(\textsf{regex},\textsf{u16})}
+       \ar@{}[ull]|{\Downarrow\alpha}
+       \ar[d]^{\pi_B}
+   & & \mathbb{N}_{(\textsf{scanner},\textsf{byte})}
+       \ar@{}[ull]|{\Downarrow\beta}
+       \ar[d]^{\pi_C} \\
+   & & \mathbb{N}\;(\text{abstract value})
+       \ar@/_2pc/[uull]_{\Sigma_A}
+       \ar@/^2pc/[uurr]^{\Sigma_C}
+   & &
+}
+\]
+
+\newpage
+\section*{3. The 17-runtime fan-in}
+
+Each empirical Clojureme we measured maps to one of seven cells.
+The cells \emph{within} a profile column receive multiple runtime arrows
+because different host substrates produce identical visible-width semantics.
+
+\[
+\xymatrix@C=1em@R=3em{
+\textsf{joker}\ar[dr]
+& \textsf{basilisp}\ar[d]
+& \textsf{glojure}\ar[dl]
+& \textsf{clojerl}\ar[dll]
+& \textsf{bb}\ar[d]
+& \textsf{clj}\ar[dl]
+& \textsf{nbb}\ar[dll]
+& \textsf{cherry}\ar[dlll]
+& \textsf{squint}\ar[dllll]
+& \textsf{cljCLR}\ar[dlllll]
+& \textsf{nanoz}\ar[d]
+& \textsf{lokke}\ar[dl]
+& \textsf{jo\_cp}\ar[dll]
+& \textsf{jank}\ar[d]
+& \textsf{Erlre}\ar[dl]
+& \textsf{jo\_b}\ar[d]
+& \textsf{Janet}\ar[dl] \\
+& *+[F=]{\textbf{A}\atop\text{regex+cp}}
+& & &
+*+[F=]{\textbf{B}\atop\text{regex+u16}}
+& & & & & &
+*+[F=]{\textbf{C}\atop\text{scan+cp}}
+& & &
+*+[F=]{\textbf{D}\atop\text{regex+byte}}
+& &
+*+[F=]{\textbf{E}\atop\text{scan+byte}}
+&
+}
+\]
+
+\section*{4. The falsification cascade as a spectral sequence}
+
+The Galois rank we could prove from each corpus snapshot increased monotonically.
+Each ``page'' $E_r$ is a corpus, each differential is the falsifying
+counter-example set that forces a basis extension.
+
+\[
+\xymatrix@C=3em@R=3em{
+*+[F]{E_0:\text{ joker}\atop\text{13 cases}}
+   \ar[r]^{d_0}_{\text{adversarial 60+}}
+& *+[F]{E_1:\text{ corpus}\atop\text{77 cases}}
+   \ar[r]^{d_1}_{\text{K1\ldots K5}}
+& *+[F]{E_2:\text{ extended}\atop\text{82 cases}}
+   \ar@{.>}[r]^{d_2}_{?}
+& *+[F.]{E_3 = ?} \\
+\text{rank} = 1
+   \ar@{=>}[u]
+& \text{rank} = 2
+   \ar@{=>}[u]
+& \text{rank} = 3
+   \ar@{=>}[u]
+& \text{rank} \geq 4 ?
+   \ar@{=>}[u] \\
+\text{basis} = \{A\}
+& \text{basis} = \{A,E\}
+& \text{basis} = \{A,E,G\}
+& \text{basis} = \{A,E,G,?\}
+}
+\]
+
+The differentials carry the structural axes that each extension forced
+into the basis: $d_0$ adds the strip and byte axes; $d_1$ adds the
+grapheme axis; $d_2$ would add (e.g.) East-Asian-Wide or RTL embedding axes
+not yet exercised.
+
+\section*{5. The (lookup $\dashv$ forget) adjunction}
+
+The 3-basis $(A, E, G)$ is left-adjoint to the forgetful map that
+projects a 7-tuple onto its three basis coordinates. The lookup is
+idempotent under composition: forgetting then re-deriving recovers
+the original 7-tuple.
+
+\[
+\xymatrix@C=10em@R=2em{
+  *+[F.]{(A,E,G) \in \mathbb{N}^3}
+  \ar@/^1.5pc/[r]^{F:\text{ lookup}}
+  &
+  *+[F.]{(A,B,C,D,E,G,H) \in \mathbb{N}^7}
+    \ar@/^1.5pc/[l]^{U:\text{ forget B,C,D,H}}_{\dashv}
+}
+\]
+
+\[
+\xymatrix@C=4em@R=2.5em{
+  & *++[F]{\text{Source AST}}
+    \ar[dl]_{\mathsf{parse}_A}
+    \ar[d]_{\mathsf{parse}_E}
+    \ar[dr]^{\mathsf{parse}_G} & \\
+  *+[F]{\mathsf{eval}_A}\ar[dr]_{\pi_A}
+  & *+[F]{\mathsf{eval}_E}\ar[d]_{\pi_E}
+  & *+[F]{\mathsf{eval}_G}\ar[dl]^{\pi_G} \\
+  & *++[o][F]{F(A,E,G)\;=\;\text{full 7-tuple}}
+    \ar@(dl,dr)[]_{\text{idempotent}}
+}
+\]
+
+\medskip
+
+\noindent\textbf{Take-away.} The whole session compresses to
+$2\times 4 = 8$ cells (one vacant), three rank-pages of falsification,
+and a single adjunction between $\mathbb{N}^3$ and $\mathbb{N}^7$.
+\end{document}

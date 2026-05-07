@@ -228,9 +228,9 @@ pub fn mmapReadOnlyNative(path: []const u8) DiskError!MmapView {
     defer closeNative(fd);
     const sz = try sizeNative(fd);
     if (sz == 0) return .{ .data = &[_]u8{}, .unmapped = true };
-    const prot: std.posix.PROT = .{ .READ = true };
-    const flags: std.posix.MAP = .{ .TYPE = .PRIVATE };
-    const slice = std.posix.mmap(null, @intCast(sz), prot, flags, fd, 0) catch return DiskError.MmapFailed;
+    // Zig 0.16.0: std.c.PROT lost READ on macOS (vm_prot_t with lowercase
+    // fields).  std.posix.mmap takes vm_prot_t on macOS; use struct literal.
+    const slice = std.posix.mmap(null, @intCast(sz), .{ .READ = true }, .{ .TYPE = .PRIVATE }, fd, 0) catch return DiskError.MmapFailed;
     return .{ .data = slice[0..@intCast(sz)], .unmapped = false };
 }
 

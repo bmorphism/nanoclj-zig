@@ -149,6 +149,7 @@ var tier1_cached_gen: u64 = 0;
 var tier2_cache: ?std.AutoHashMap(u64, CacheEntry) = null;
 
 fn ensureTreeCache(allocator: std.mem.Allocator) *std.AutoHashMap(u64, CacheEntry) {
+    if (skill_allocator == null) skill_allocator = allocator;
     if (tree_cache == null) {
         tree_cache = std.AutoHashMap(u64, CacheEntry).init(allocator);
     }
@@ -156,6 +157,7 @@ fn ensureTreeCache(allocator: std.mem.Allocator) *std.AutoHashMap(u64, CacheEntr
 }
 
 fn ensureExpandCache(allocator: std.mem.Allocator) *std.AutoHashMap(u64, CacheEntry) {
+    if (skill_allocator == null) skill_allocator = allocator;
     if (expand_cache == null) {
         expand_cache = std.AutoHashMap(u64, CacheEntry).init(allocator);
     }
@@ -163,6 +165,7 @@ fn ensureExpandCache(allocator: std.mem.Allocator) *std.AutoHashMap(u64, CacheEn
 }
 
 fn ensureTier2Cache(allocator: std.mem.Allocator) *std.AutoHashMap(u64, CacheEntry) {
+    if (skill_allocator == null) skill_allocator = allocator;
     if (tier2_cache == null) {
         tier2_cache = std.AutoHashMap(u64, CacheEntry).init(allocator);
     }
@@ -187,7 +190,8 @@ fn invalidateCaches() void {
 //
 // Resolution order: if id contains '/' or '.', try as literal path first.
 // Otherwise, search roots × extensions. First match wins.
-// Content is interned in GC string table → zero-copy on repeat access.
+// Cache entries own their file-content buffers; callers receive independent
+// copies so cache teardown and caller teardown never share an allocation.
 
 /// Search roots: forests, .topos subdirs, skill dirs. Order = priority.
 const search_roots = [_][]const u8{
@@ -302,13 +306,19 @@ fn resolveTree(id: []const u8, allocator: std.mem.Allocator) ?[]const u8 {
                 allocator.free(fresh);
                 return allocator.dupe(u8, entry.content) catch null;
             }
-            // Content changed — update cache entry
-            tc.put(id_hash, .{
-                .content = fresh,
-                .hash = fresh_hash,
-                .generation = cache_generation,
-            }) catch {};
-            return fresh;
+            // Content changed — replace the owned cache entry and return a
+            // caller-owned copy.
+            if (tc.getPtr(id_hash)) |stale| {
+                allocator.free(stale.content);
+                stale.* = .{
+                    .content = fresh,
+                    .hash = fresh_hash,
+                    .generation = cache_generation,
+                };
+                return allocator.dupe(u8, fresh) catch null;
+            }
+            allocator.free(fresh);
+            return null;
         }
         return null;
     }
@@ -319,7 +329,9 @@ fn resolveTree(id: []const u8, allocator: std.mem.Allocator) ?[]const u8 {
         .content = content,
         .hash = contentHash(content),
         .generation = cache_generation,
-    }) catch {};
+    }) catch {
+        return content;
+    };
     // Return a dupe so caller can free independently
     return allocator.dupe(u8, content) catch null;
 }
@@ -975,7 +987,8 @@ pub const skill_table = .{
 // TESTS
 // ============================================================================
 
-fn cleanupGlobalState(alloc: std.mem.Allocator) void {
+pub fn deinitGlobalState() void {
+    const alloc = skill_allocator orelse return;
     if (skill_net) |*n| {
         n.deinit();
         skill_net = null;
@@ -986,6 +999,10 @@ fn cleanupGlobalState(alloc: std.mem.Allocator) void {
     }
     skill_allocator = null;
     if (tree_cache) |*tc| {
+        var it = tc.valueIterator();
+        while (it.next()) |entry| {
+            alloc.free(entry.content);
+        }
         tc.deinit();
         tree_cache = null;
     }
@@ -1000,7 +1017,13 @@ fn cleanupGlobalState(alloc: std.mem.Allocator) void {
     tier1_cached_xml = null;
     tier1_cached_gen = 0;
     cache_generation = 0;
-    _ = alloc;
+}
+
+fn cleanupGlobalState(alloc: std.mem.Allocator) void {
+    if (skill_allocator == null and (skill_net != null or name_to_cell != null or tree_cache != null or expand_cache != null or tier2_cache != null)) {
+        skill_allocator = alloc;
+    }
+    deinitGlobalState();
 }
 
 test "parse EDN frontmatter" {

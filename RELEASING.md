@@ -54,17 +54,13 @@ recipe matching the binaries the GH Actions release attaches.
 
 ## Toolchain note
 
-CI uses `mlugg/setup-zig@v2` with `version: 0.16.0`. This currently
-resolves to a specific dev tarball (zig 0.16.0 release isn't out yet);
-the resolved version has a 3-arg form for `std.json.ObjectMap.init` and
-`std.StringArrayHashMap.put` that newer dev builds (e.g. `0.16.0-dev.3070+`)
-have replaced with 1-arg / 2-arg respectively.
+CI uses `mlugg/setup-zig@v2` with `version: 0.16.0`. Local development
+should use the same final 0.16.0 release, either from the wrapper at
+`scripts/zig` or from `NANOCLJ_ZIG_016_DIR`.
 
-Local development with a newer dev zig surfaces ~40 sites in
-`src/gorj_mcp.zig` and `src/mcp_tool.zig` that need API patches. Until
-upstream agent-o-rama-equivalent code adds a comptime version branch
-(or stable 0.16.0 ships), pin local dev to the same version CI uses.
+Do not use pre-release snapshots for release checks. The final
+0.16.0 compiler is the compatibility floor for CI, Flox, and local
+wrapper-driven builds.
 
-The Nix and Flox paths sidestep this by relying on each system's
-`pkgs.zig` / `flox install zig`, which version-track the same release
-the CI tarball does.
+The Nix and Flox paths rely on each system's `pkgs.zig` / `flox install zig`
+only when that package resolves to the final 0.16.0 release or newer.

@@ -166,15 +166,15 @@ fn runStep(
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
-fn echoBody(_: *Agent, input: Value) error{Invoke}!Value {
+fn echoBody(_: *anyopaque, input: Value) error{Invoke}!Value {
     return input;
 }
 
-fn incBody(_: *Agent, input: Value) error{Invoke}!Value {
+fn incBody(_: *anyopaque, input: Value) error{Invoke}!Value {
     return Value.makeInt(input.asInt() + 1);
 }
 
-fn doubleBody(_: *Agent, input: Value) error{Invoke}!Value {
+fn doubleBody(_: *anyopaque, input: Value) error{Invoke}!Value {
     return Value.makeInt(input.asInt() * 2);
 }
 
