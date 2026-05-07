@@ -38,6 +38,10 @@ const SERVER_VERSION = "0.3.0";
 const PROTOCOL_VERSION = "2025-11-05";
 const MAX_LINE_SIZE = 4 * 1024 * 1024;
 
+fn emptyObject() json.ObjectMap {
+    return .empty;
+}
+
 // ============================================================================
 // MCP TASKS — async long-running eval with fuel tracking (2025-11-25 spec)
 // ============================================================================
@@ -1462,44 +1466,44 @@ fn writeJsonLine(writer: anytype, val: json.Value, allocator: std.mem.Allocator)
 }
 
 fn makeResponse(allocator: std.mem.Allocator, id: json.Value, result: json.Value) !json.Value {
-    var obj = json.ObjectMap.init(allocator);
-    try obj.put("jsonrpc", .{ .string = "2.0" });
-    try obj.put("id", id);
-    try obj.put("result", result);
+    var obj = emptyObject();
+    try obj.put(allocator, "jsonrpc", .{ .string = "2.0" });
+    try obj.put(allocator, "id", id);
+    try obj.put(allocator, "result", result);
     return .{ .object = obj };
 }
 
 fn makeError(allocator: std.mem.Allocator, id: json.Value, code: i64, message: []const u8) !json.Value {
-    var err_obj = json.ObjectMap.init(allocator);
-    try err_obj.put("code", .{ .integer = code });
-    try err_obj.put("message", .{ .string = message });
-    var obj = json.ObjectMap.init(allocator);
-    try obj.put("jsonrpc", .{ .string = "2.0" });
-    try obj.put("id", id);
-    try obj.put("error", .{ .object = err_obj });
+    var err_obj = emptyObject();
+    try err_obj.put(allocator, "code", .{ .integer = code });
+    try err_obj.put(allocator, "message", .{ .string = message });
+    var obj = emptyObject();
+    try obj.put(allocator, "jsonrpc", .{ .string = "2.0" });
+    try obj.put(allocator, "id", id);
+    try obj.put(allocator, "error", .{ .object = err_obj });
     return .{ .object = obj };
 }
 
 fn toolResult(allocator: std.mem.Allocator, text: []const u8) !json.Value {
-    var content_obj = json.ObjectMap.init(allocator);
-    try content_obj.put("type", .{ .string = "text" });
-    try content_obj.put("text", .{ .string = text });
+    var content_obj = emptyObject();
+    try content_obj.put(allocator, "type", .{ .string = "text" });
+    try content_obj.put(allocator, "text", .{ .string = text });
     var content_arr = json.Array.init(allocator);
     try content_arr.append(.{ .object = content_obj });
-    var result = json.ObjectMap.init(allocator);
-    try result.put("content", .{ .array = content_arr });
+    var result = emptyObject();
+    try result.put(allocator, "content", .{ .array = content_arr });
     return .{ .object = result };
 }
 
 fn toolError(allocator: std.mem.Allocator, text: []const u8) !json.Value {
-    var content_obj = json.ObjectMap.init(allocator);
-    try content_obj.put("type", .{ .string = "text" });
-    try content_obj.put("text", .{ .string = text });
+    var content_obj = emptyObject();
+    try content_obj.put(allocator, "type", .{ .string = "text" });
+    try content_obj.put(allocator, "text", .{ .string = text });
     var content_arr = json.Array.init(allocator);
     try content_arr.append(.{ .object = content_obj });
-    var result = json.ObjectMap.init(allocator);
-    try result.put("content", .{ .array = content_arr });
-    try result.put("isError", .{ .bool = true });
+    var result = emptyObject();
+    try result.put(allocator, "content", .{ .array = content_arr });
+    try result.put(allocator, "isError", .{ .bool = true });
     return .{ .object = result };
 }
 
@@ -1508,22 +1512,22 @@ fn toolError(allocator: std.mem.Allocator, text: []const u8) !json.Value {
 // ============================================================================
 
 fn handleInitialize(allocator: std.mem.Allocator) !json.Value {
-    var server_info = json.ObjectMap.init(allocator);
-    try server_info.put("name", .{ .string = SERVER_NAME });
-    try server_info.put("version", .{ .string = SERVER_VERSION });
+    var server_info = emptyObject();
+    try server_info.put(allocator, "name", .{ .string = SERVER_NAME });
+    try server_info.put(allocator, "version", .{ .string = SERVER_VERSION });
 
-    var capabilities = json.ObjectMap.init(allocator);
-    try capabilities.put("tools", .{ .object = json.ObjectMap.init(allocator) });
+    var capabilities = emptyObject();
+    try capabilities.put(allocator, "tools", .{ .object = emptyObject() });
 
     // Advertise experimental tasks support (MCP 2025-11-25)
-    var tasks_cap = json.ObjectMap.init(allocator);
-    try tasks_cap.put("supported", .{ .bool = true });
-    try capabilities.put("tasks", .{ .object = tasks_cap });
+    var tasks_cap = emptyObject();
+    try tasks_cap.put(allocator, "supported", .{ .bool = true });
+    try capabilities.put(allocator, "tasks", .{ .object = tasks_cap });
 
-    var result = json.ObjectMap.init(allocator);
-    try result.put("protocolVersion", .{ .string = PROTOCOL_VERSION });
-    try result.put("capabilities", .{ .object = capabilities });
-    try result.put("serverInfo", .{ .object = server_info });
+    var result = emptyObject();
+    try result.put(allocator, "protocolVersion", .{ .string = PROTOCOL_VERSION });
+    try result.put(allocator, "capabilities", .{ .object = capabilities });
+    try result.put(allocator, "serverInfo", .{ .object = server_info });
     return .{ .object = result };
 }
 
@@ -1537,23 +1541,23 @@ fn handleTasksGet(allocator: std.mem.Allocator, params: json.ObjectMap) !json.Va
 
     const task = getTask(task_id) orelse return toolError(allocator, "unknown task ID");
 
-    var task_obj = json.ObjectMap.init(allocator);
+    var task_obj = emptyObject();
     var id_str_buf: [20]u8 = undefined;
     const id_str = std.fmt.bufPrint(&id_str_buf, "{d}", .{task.id}) catch "0";
-    try task_obj.put("taskId", .{ .string = id_str });
-    try task_obj.put("state", .{ .string = switch (task.state) {
+    try task_obj.put(allocator, "taskId", .{ .string = id_str });
+    try task_obj.put(allocator, "state", .{ .string = switch (task.state) {
         .working => "working",
         .completed => "completed",
         .failed => "failed",
     } });
 
     if (task.result) |r| {
-        var content_obj = json.ObjectMap.init(allocator);
-        try content_obj.put("type", .{ .string = "text" });
-        try content_obj.put("text", .{ .string = r });
+        var content_obj = emptyObject();
+        try content_obj.put(allocator, "type", .{ .string = "text" });
+        try content_obj.put(allocator, "text", .{ .string = r });
         var content_arr = json.Array.init(allocator);
         try content_arr.append(.{ .object = content_obj });
-        try task_obj.put("content", .{ .array = content_arr });
+        try task_obj.put(allocator, "content", .{ .array = content_arr });
     }
 
     return .{ .object = task_obj };
@@ -1562,17 +1566,17 @@ fn handleTasksGet(allocator: std.mem.Allocator, params: json.ObjectMap) !json.Va
 fn handleToolsList(allocator: std.mem.Allocator) !json.Value {
     var tool_array = json.Array.init(allocator);
     for (tool_defs) |tool| {
-        var tool_obj = json.ObjectMap.init(allocator);
-        try tool_obj.put("name", .{ .string = tool.name });
-        try tool_obj.put("description", .{ .string = tool.description });
+        var tool_obj = emptyObject();
+        try tool_obj.put(allocator, "name", .{ .string = tool.name });
+        try tool_obj.put(allocator, "description", .{ .string = tool.description });
         const schema = try json.parseFromSlice(json.Value, allocator, tool.input_schema, .{
             .allocate = .alloc_always,
         });
-        try tool_obj.put("inputSchema", schema.value);
+        try tool_obj.put(allocator, "inputSchema", schema.value);
         try tool_array.append(.{ .object = tool_obj });
     }
-    var result = json.ObjectMap.init(allocator);
-    try result.put("tools", .{ .array = tool_array });
+    var result = emptyObject();
+    try result.put(allocator, "tools", .{ .array = tool_array });
     return .{ .object = result };
 }
 
@@ -1584,8 +1588,8 @@ fn handleCallTool(allocator: std.mem.Allocator, params: json.ObjectMap) !json.Va
     };
     const arguments = if (params.get("arguments")) |a| switch (a) {
         .object => |o| o,
-        else => json.ObjectMap.init(allocator),
-    } else json.ObjectMap.init(allocator);
+        else => emptyObject(),
+    } else emptyObject();
 
     // Self-hosted dispatch: call into nanoclj runtime
     const result_text = dispatchTool(allocator, name, arguments) catch {
@@ -1605,14 +1609,14 @@ fn handleMethod(allocator: std.mem.Allocator, method: []const u8, obj: json.Obje
     } else if (std.mem.eql(u8, method, "tools/call")) {
         const params = if (obj.get("params")) |p| switch (p) {
             .object => |o| o,
-            else => json.ObjectMap.init(allocator),
-        } else json.ObjectMap.init(allocator);
+            else => emptyObject(),
+        } else emptyObject();
         return handleCallTool(allocator, params);
     } else if (std.mem.eql(u8, method, "tasks/get")) {
         const params = if (obj.get("params")) |p| switch (p) {
             .object => |o| o,
-            else => json.ObjectMap.init(allocator),
-        } else json.ObjectMap.init(allocator);
+            else => emptyObject(),
+        } else emptyObject();
         return handleTasksGet(allocator, params);
     } else {
         return makeError(allocator, .null, -32601, "Method not found");
