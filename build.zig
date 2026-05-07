@@ -264,6 +264,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/visible_width.zig"),
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         }),
     });
     const run_visible_width_tests = b.addRunArtifact(visible_width_tests);
